@@ -7,3 +7,6 @@ Thumbs.db
 
 # config local do editor/harness
 .claude/settings.local.json
+
+# arquivos temporarios do Excel
+~$*.xlsx
