@@ -488,7 +488,9 @@ function jogarAtributo(chave, porOponente){
   const attr = ATRIBUTOS.find(a=>a.chave===chave);
 
   Som.play("atributo");
-  $("#carta-cpu").innerHTML = htmlCarta(seu, {});
+  // realça o atributo escolhido (preenchido/contornado de amarelo) nas duas cartas
+  $("#carta-jogador").innerHTML = htmlCarta(meu, {destaque:chave});
+  $("#carta-cpu").innerHTML = htmlCarta(seu, {destaque:chave});
   $("#turno-aviso").innerHTML = porOponente
     ? `🤖 Oponente escolheu: ${attr.svg}<span>${attr.nome}</span>`
     : `Atributo: ${attr.svg}<span>${attr.nome}</span>`;
@@ -1056,6 +1058,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   // configurações
   $("#btn-config").addEventListener("click", abrirConfig);
+  $("#menu-avatar").addEventListener("click", abrirConfig);   // clicar na foto abre troca
   $("#btn-config-voltar").addEventListener("click", irMenu);
   $("#btn-config-salvar").addEventListener("click", salvarConfig);
   $("#btn-config-reset").addEventListener("click", resetProgresso);

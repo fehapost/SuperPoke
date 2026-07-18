@@ -152,26 +152,21 @@ body{
 .attr{
   display:flex;justify-content:space-between;align-items:center;
   background:rgba(255,255,255,.14);border-radius:8px;padding:4px 8px;
-  font-weight:700;transition:background .15s,transform .15s;min-width:0;
-  border:2px solid transparent;
+  font-weight:700;transition:background .15s,transform .15s,box-shadow .15s;min-width:0;
+  border:2px solid rgba(255,255,255,.4);   /* contorno branco suave */
 }
-/* contorno colorido por atributo (mesma cor do ícone) */
-.attr.attr-vida{border-color:#e01f26}
-.attr.attr-forca{border-color:#ef4a1e}
-.attr.attr-ataque{border-color:#f15a22}
-.attr.attr-defesa{border-color:#f5a623}
-.attr.attr-agilidade{border-color:#67c327}
-.attr.attr-inteligencia{border-color:#23c6d6}
 .attr .attr-nome{display:flex;align-items:center;gap:5px;font-size:.66rem;
   letter-spacing:.2px;min-width:0;overflow:hidden}
 .attr .attr-nome>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .attr .attr-val{font-size:1.05rem;font-weight:900;font-variant-numeric:tabular-nums;padding-left:4px}
 .ic{width:18px;height:18px;flex:none;display:block}
 .attr.clicavel{cursor:pointer}
-.attr.clicavel:hover{background:rgba(255,255,255,.32);transform:translateX(2px)}
-.attr.escolhido{background:var(--amarelo);color:var(--tinta)}
-.attr.venceu{background:var(--verde);color:#fff;box-shadow:0 0 0 2px #fff inset}
-.attr.perdeu{background:var(--vermelho);color:#fff}
+.attr.clicavel:hover{background:var(--amarelo);color:var(--tinta);border-color:#fff;transform:translateX(2px)}
+/* atributo escolhido: preenchido de amarelo + contorno amarelo brilhante */
+.attr.escolhido{background:var(--amarelo);color:var(--tinta);border-color:#fff;
+  box-shadow:0 0 0 2px var(--amarelo),0 0 10px rgba(255,203,5,.7)}
+.attr.venceu{background:var(--verde);color:#fff;border-color:#fff;box-shadow:0 0 0 2px #fff inset}
+.attr.perdeu{background:var(--vermelho);color:#fff;border-color:#fff}
 
 /* Verso da carta */
 .carta-verso{
@@ -195,10 +190,12 @@ body{
 }
 
 /* ===== AÇÕES ===== */
-#turno-aviso{min-height:24px;font-weight:800;letter-spacing:1px;
-  display:flex;align-items:center;justify-content:center;gap:7px}
+/* tela de jogo: tudo compacto e perto das cartas */
+#tela-jogo.ativa{gap:8px}
+#turno-aviso{min-height:22px;font-weight:800;letter-spacing:1px;
+  display:flex;align-items:center;justify-content:center;gap:7px;margin-top:-2px}
 #turno-aviso .ic{width:22px;height:22px}
-#acoes{width:100%;max-width:520px;text-align:center}
+#acoes{width:100%;max-width:520px;text-align:center;margin:0}
 #instrucao{margin-bottom:8px;opacity:.9}
 #botoes-atributos{display:grid;grid-template-columns:repeat(2,1fr);
   grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:8px}
@@ -283,16 +280,23 @@ body{
 .col-item .carta{width:100%;transition:filter .15s}
 .col-item.favorito .carta{outline:4px solid var(--amarelo);border-radius:18px;
   box-shadow:0 0 16px rgba(255,203,5,.55)}
-/* check movido para baixo (não sobrepõe mais os status do topo) */
-.fav-badge{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
-  padding:4px 12px;border-radius:999px;font-weight:800;font-size:.72rem;
-  background:rgba(0,0,0,.72);color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.5);pointer-events:none;white-space:nowrap;z-index:2}
+/* check logo abaixo do número do Pokémon (canto superior esquerdo) */
+.fav-badge{position:absolute;top:38px;left:8px;
+  padding:3px 10px;border-radius:999px;font-weight:800;font-size:.66rem;
+  background:rgba(0,0,0,.72);color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.5);pointer-events:none;white-space:nowrap;z-index:3}
 .col-item.favorito .fav-badge{background:var(--amarelo);color:var(--tinta)}
-/* botão "ver melhor" no canto superior direito */
-.btn-ver{position:absolute;top:8px;right:8px;z-index:3;width:34px;height:34px;
-  border:none;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:1rem;
+/* botão "ver melhor" (lupa) no canto superior ESQUERDO */
+.btn-ver{position:absolute;top:8px;left:8px;z-index:4;width:32px;height:32px;
+  border:none;border-radius:50%;background:rgba(0,0,0,.68);color:#fff;font-size:.95rem;
   cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4);transition:transform .1s,background .1s}
 .btn-ver:hover{background:var(--azul);transform:scale(1.12)}
+/* abre espaço para a lupa/check e diminui a fonte dos atributos na coleção */
+#col-grid .carta-topo{padding-left:46px}
+#col-grid .attr{padding:3px 7px}
+#col-grid .attr .attr-nome{font-size:.56rem;gap:4px}
+#col-grid .attr .attr-val{font-size:.9rem}
+#col-grid .ic{width:15px;height:15px}
+#col-grid .carta-nome{margin-top:14px}
 #col-msg{width:100%;text-align:center;color:#fff;font-weight:700;max-height:0;overflow:hidden;
   transition:all .2s;opacity:0}
 #col-msg.show{max-height:50px;padding:8px;opacity:1;background:rgba(227,53,13,.9);border-radius:10px;margin-top:8px}
@@ -307,7 +311,13 @@ body{
 .avatar-jogador{border-color:var(--amarelo)}
 .botoes-mini{display:flex;flex-direction:column;gap:4px}
 .perfil-menu{display:flex;flex-direction:column;align-items:center;gap:6px}
-.avatar-grande{width:76px;height:76px;font-size:2.6rem;border-color:var(--amarelo)}
+.avatar-grande{width:76px;height:76px;font-size:2.6rem;border-color:var(--amarelo);
+  cursor:pointer;transition:transform .1s}
+.avatar-grande:hover{transform:scale(1.08);box-shadow:0 0 14px rgba(255,203,5,.5)}
+#menu-avatar::after{content:"✎";position:absolute;transform:translate(26px,22px);
+  font-size:.9rem;background:var(--azul);color:#fff;border-radius:50%;width:22px;height:22px;
+  display:flex;align-items:center;justify-content:center;border:2px solid #182238}
+.perfil-menu{position:relative}
 .perfil-nome{font-size:1.2rem;font-weight:800;color:var(--amarelo)}
 
 /* ===== CONFIGURAÇÕES ===== */
