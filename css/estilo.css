@@ -220,9 +220,27 @@ body{
 .log-derrota{color:#ff9d8a}
 .log-empate{color:var(--amarelo)}
 
-/* contagem regressiva no botão Próxima */
-.btn-prox .cd{display:inline-block;min-width:2.4em;text-align:left;
-  background:rgba(0,0,0,.28);border-radius:8px;padding:0 6px;margin-left:4px;font-variant-numeric:tabular-nums}
+/* ===== CRONÔMETRO CIRCULAR (anel que preenche + número) ===== */
+.crono{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;vertical-align:middle;margin-left:8px}
+.crono svg{width:100%;height:100%;transform:rotate(-90deg)}
+.crono .cr-bg{fill:none;stroke:rgba(0,0,0,.28);stroke-width:3.5}
+.crono .cr-fg{fill:none;stroke:#fff;stroke-width:3.5;stroke-linecap:round}
+.crono .cr-num{position:absolute;font-size:.9rem;font-weight:900;color:#fff;
+  font-variant-numeric:tabular-nums}
+/* versão grande na tela de fim */
+.crono-grande{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:74px;height:74px}
+.crono-grande svg{width:100%;height:100%;transform:rotate(-90deg)}
+.crono-grande .cr-bg{fill:none;stroke:rgba(255,255,255,.18);stroke-width:3}
+.crono-grande .cr-fg{fill:none;stroke:var(--amarelo);stroke-width:3.5;stroke-linecap:round}
+.crono-grande .cr-num{position:absolute;font-size:2rem;font-weight:900;color:#fff}
+.fim-crono-box{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:6px}
+.fim-crono-txt{font-size:.8rem;color:#cfe0ff;opacity:.8}
+
+/* grade da escolha inicial (mesma da seleção de time) */
+#ini-grid{width:100%;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding-top:14px}
 
 .btn-sair{align-self:center;background:transparent;box-shadow:none;
   padding:6px 14px;font-size:.9rem;opacity:.6;margin-top:2px}

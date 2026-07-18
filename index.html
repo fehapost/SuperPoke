@@ -49,6 +49,19 @@
     </div>
   </section>
 
+  <!-- ===== TELA ESCOLHA INICIAL (3 de 10 comuns) ===== -->
+  <section id="tela-inicial" class="tela">
+    <header class="sub-header fixo">
+      <div class="sub-header-linha">
+        <h2>🎁 Escolha seus 3 primeiros Pokémon</h2>
+        <span class="chip">Escolhidas: <b id="ini-contagem">0</b>/3</span>
+        <button class="btn btn-grande" id="btn-ini-confirmar" disabled>Começar ▶</button>
+      </div>
+    </header>
+    <p class="sub-desc">Sorteamos 10 Pokémon comuns. Clique em <b>3</b> para montar seu baralho inicial!</p>
+    <div id="ini-grid"></div>
+  </section>
+
   <!-- ===== TELA CONFIGURAÇÕES ===== -->
   <section id="tela-config" class="tela">
     <header class="sub-header">
@@ -209,6 +222,10 @@
     <h1 id="fim-titulo"></h1>
     <p id="fim-sub"></p>
     <div id="fim-acoes" class="menu-botoes"></div>
+    <div class="fim-crono-box">
+      <span id="fim-crono" class="crono-grande"></span>
+      <span class="fim-crono-txt">avança automaticamente...</span>
+    </div>
   </section>
 
   <!-- ===== TELA COLEÇÃO ===== -->

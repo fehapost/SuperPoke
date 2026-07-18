@@ -106,7 +106,8 @@ function ehBoss(nivel){ return nivel >= 21; }   // bosses finais têm lendários
 let progresso = carregarProgresso();
 
 function progressoPadrao(){
-  return { owned: CARTAS_INICIAIS.slice(), pontos: 0, nivel: 1, vitorias: 0, derrotas: 0,
+  // owned vazio: o jogador escolhe seus 3 primeiros Pokémon na tela inicial
+  return { owned: [], pontos: 0, nivel: 1, vitorias: 0, derrotas: 0,
            timeFavorito: [], nome: "Treinador", foto: "🧑" };
 }
 function carregarProgresso(){
@@ -417,22 +418,49 @@ function atualizarMaoOponente(){
   cont.innerHTML = html;
 }
 
-/* ---------- Temporizador da próxima rodada ---------- */
+/* ---------- Cronômetro circular reutilizável ---------- */
+const CRONO_CIRC = 100.53;   // 2*pi*16
+// markup do cronômetro (anel que preenche + número no centro)
+function htmlCrono(seg){
+  return `<span class="crono">
+    <svg viewBox="0 0 36 36"><circle class="cr-bg" cx="18" cy="18" r="16"></circle>`+
+    `<circle class="cr-fg" cx="18" cy="18" r="16" stroke-dasharray="${CRONO_CIRC}" stroke-dashoffset="${CRONO_CIRC}"></circle></svg>`+
+    `<b class="cr-num">${seg}</b></span>`;
+}
+// anima o anel de vazio→cheio em `segundos` e conta 5..1; chama onDone no fim
+function animarCrono(host, segundos, onDone){
+  const fg = host.querySelector(".cr-fg");
+  const num = host.querySelector(".cr-num");
+  if(fg){
+    fg.style.transition = "none";
+    fg.style.strokeDashoffset = CRONO_CIRC;
+    void fg.getBoundingClientRect();   // força reflow p/ registrar o estado inicial
+    fg.style.transition = `stroke-dashoffset ${segundos}s linear`;
+    fg.style.strokeDashoffset = "0";
+  }
+  let restante = segundos;
+  if(num) num.textContent = restante;
+  return setInterval(()=>{
+    restante--;
+    if(num) num.textContent = Math.max(0, restante);
+    if(restante <= 0){ onDone && onDone(); }
+  }, 1000);
+}
+
 let _tickTimer = null;
-function limparTimers(){ clearInterval(_tickTimer); _tickTimer = null; }
+let _fimTimer = null;
+function limparTimers(){
+  clearInterval(_tickTimer); _tickTimer = null;
+  clearInterval(_fimTimer);  _fimTimer = null;
+  clearInterval(_revealTimer); _revealTimer = null;
+}
 function agendarProxima(segundos){
   limparTimers();
   const b = $("#btn-proxima");
-  let restante = segundos;
-  const render = ()=> b.innerHTML = `Próxima rodada ▶ <span class="cd">${restante}s</span>`;
   b.hidden = false;
-  render();
+  b.innerHTML = `Próxima rodada ▶ ${htmlCrono(segundos)}`;
   b.onclick = ()=>{ limparTimers(); proximaRodada(); };
-  _tickTimer = setInterval(()=>{
-    restante--;
-    if(restante <= 0){ limparTimers(); proximaRodada(); }
-    else render();
-  }, 1000);
+  _tickTimer = animarCrono(b, segundos, ()=>{ limparTimers(); proximaRodada(); });
 }
 
 function proximaRodada(){
@@ -631,8 +659,9 @@ function finalizar(empate){
   const t = $("#fim-titulo"), s = $("#fim-sub"), acoes = $("#fim-acoes");
   t.classList.remove("venceu","perdeu","empatou");
   acoes.innerHTML = "";
+  const emCampanha = ctx.tipo === "campanha";
+  let autoAvancar = emCampanha ? abrirCampanha : irMenu;
 
-  // ---- EMPATE ----
   if(empate){
     Som.play("empate");
     t.textContent = "🤝 EMPATE";
@@ -641,38 +670,34 @@ function finalizar(empate){
       ? `limite de ${MAX_RODADAS} rodadas atingido`
       : `${MAX_EMPATES_SEGUIDOS} empates seguidos`;
     s.innerHTML = `A batalha terminou empatada (${motivo}). Ninguém venceu.`;
-    if(ctx.tipo === "campanha"){
+    if(emCampanha){
       botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel));
       botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
     } else {
       botaoFim(acoes, "↺ Jogar de novo", "btn-grande", escolherBatalhaLivre);
       botaoFim(acoes, "Menu inicial", "btn-sec", irMenu);
     }
-    return;
-  }
-
-  Som.play(venceu ? "vencerPartida" : "perderPartida");
-
-  if(ctx.tipo === "campanha"){       // aqui só cai em DERROTA
+  } else if(emCampanha){       // DERROTA na campanha
+    Som.play("perderPartida");
     const info = NIVEIS[ctx.nivel-1];
     progresso.derrotas = (progresso.derrotas||0) + 1;
+    progresso.pontos += 10;    // consolação: derrota dá 10 moedas
     salvarProgresso();
     t.textContent = "☠ DERROTA";
     t.classList.add("perdeu");
-    s.innerHTML = `<b>${info.nome}</b> foi forte demais...<br>Monte outro time, ganhe pontos e compre cartas melhores na loja!`;
+    s.innerHTML = `<b>${info.nome}</b> foi forte demais...<br><span class="ganho">+10 de ouro</span> de consolação. Compre cartas melhores na loja!`;
     botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel));
     botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
     botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
-  } else {
-    // ---- BATALHA LIVRE ----
+  } else {                     // BATALHA LIVRE (vitória ou derrota)
+    Som.play(venceu ? "vencerPartida" : "perderPartida");
     if(venceu){
       t.textContent = "🏆 VOCÊ VENCEU!"; t.classList.add("venceu");
       let extra = "";
       if(ctx.modo === "meu"){
-        const ouro = 30;
-        progresso.pontos += ouro;
-        extra = ` <span class="ganho">+${ouro} de ouro!</span>`;
-        const leg = rolarLendario(progresso.owned);   // sorte de lendário
+        progresso.pontos += 30;
+        extra = ` <span class="ganho">+30 de ouro!</span>`;
+        const leg = rolarLendario(progresso.owned);
         if(leg){ progresso.owned.push(leg); extra += `<br>✨ Que sorte! Você encontrou <b>${cartaPorId(leg).nome}</b>!`; }
         salvarProgresso();
       }
@@ -684,6 +709,11 @@ function finalizar(empate){
     botaoFim(acoes, "↺ Jogar de novo", "btn-grande", escolherBatalhaLivre);
     botaoFim(acoes, "Menu inicial", "btn-sec", irMenu);
   }
+
+  // cronômetro circular de 5s → auto-avança
+  const host = $("#fim-crono");
+  host.innerHTML = htmlCrono(5);
+  _fimTimer = animarCrono(host, 5, ()=>{ limparTimers(); autoAvancar(); });
 }
 
 /* ---------- Tela de prêmio (vitória de campanha) ---------- */
@@ -750,15 +780,17 @@ function escolherPremio(id){
   });
   confete();
 
-  // revelação: carta vem para frente, fica grande, espera 3s (ou clique em OK)
+  // revelação: carta vem para frente, fica grande, cronômetro de 5s (ou clique em OK)
   $("#reveal-carta").innerHTML = htmlCarta(p, {});
   const rev = $("#premio-reveal");
   rev.hidden = false;
-  clearTimeout(_revealTimer);
-  _revealTimer = setTimeout(fecharRevelacao, 3000);
+  const okBtn = $("#btn-reveal-ok");
+  okBtn.innerHTML = `OK ▶ ${htmlCrono(5)}`;
+  clearInterval(_revealTimer);
+  _revealTimer = animarCrono(okBtn, 5, fecharRevelacao);
 }
 function fecharRevelacao(){
-  clearTimeout(_revealTimer);
+  clearInterval(_revealTimer);
   const rev = $("#premio-reveal");
   if(rev) rev.hidden = true;
   abrirCampanha();   // próxima tela
@@ -959,6 +991,61 @@ function flashColecao(txt){
 }
 
 /* ===================================================================
+   ESCOLHA INICIAL — 3 Pokémon de uma lista de 10 comuns
+   =================================================================== */
+let _iniOpcoes = [];
+const _iniSelec = new Set();
+function abrirEscolhaInicial(){
+  _iniSelec.clear();
+  const comuns = POKEMONS.filter(p => p.raridade === "Comum");
+  _iniOpcoes = embaralhar(comuns).slice(0, 10);
+  mostrarTela("tela-inicial");
+  renderInicial();
+}
+function renderInicial(){
+  const grid = $("#ini-grid");
+  grid.innerHTML = "";
+  _iniOpcoes.forEach(p=>{
+    const sel = _iniSelec.has(p.id);
+    const el = document.createElement("div");
+    el.className = "sel-item" + (sel ? " sel" : "");
+    el.dataset.id = p.id;
+    el.innerHTML = htmlCarta(p, {}) + (sel ? '<div class="sel-check">✔</div>' : "");
+    el.onclick = ()=>toggleInicial(p.id, el);
+    grid.appendChild(el);
+  });
+  $("#ini-contagem").textContent = _iniSelec.size;
+  $("#btn-ini-confirmar").disabled = _iniSelec.size !== 3;
+}
+function toggleInicial(id, el){
+  if(_iniSelec.has(id)){ _iniSelec.delete(id); }
+  else { if(_iniSelec.size >= 3){ Som.play("erro"); return; } _iniSelec.add(id); }
+  Som.play("select");
+  const sel = _iniSelec.has(id);
+  el.classList.toggle("sel", sel);
+  let chk = el.querySelector(".sel-check");
+  if(sel && !chk){ chk = document.createElement("div"); chk.className = "sel-check"; chk.textContent = "✔"; el.appendChild(chk); }
+  else if(!sel && chk){ chk.remove(); }
+  const carta = el.querySelector(".carta");
+  if(carta){ carta.classList.remove("girar"); void carta.offsetWidth; carta.classList.add("girar"); }
+  $("#ini-contagem").textContent = _iniSelec.size;
+  $("#btn-ini-confirmar").disabled = _iniSelec.size !== 3;
+}
+function confirmarInicial(){
+  if(_iniSelec.size !== 3) return;
+  progresso.owned = [..._iniSelec];
+  salvarProgresso();
+  Som.play("comprar");
+  irMenu();
+}
+// escolhe entre menu ou tela inicial (se ainda não tem cartas)
+function iniciarApp(){
+  atualizarMenu();
+  if(!progresso.owned || progresso.owned.length === 0) abrirEscolhaInicial();
+  else irMenu();
+}
+
+/* ===================================================================
    MENU
    =================================================================== */
 function atualizarMenu(){
@@ -971,11 +1058,10 @@ function atualizarMenu(){
 function irMenu(){ mostrarTela("tela-menu"); atualizarMenu(); }
 
 function resetProgresso(){
-  if(!confirm("Reiniciar todo o progresso? Você volta às 3 cartas iniciais e 0 pontos.")) return;
+  if(!confirm("Reiniciar todo o progresso? Você vai escolher 3 novos Pokémon e volta a 0 de ouro.")) return;
   progresso = progressoPadrao();
   salvarProgresso();
-  atualizarMenu();
-  irMenu();
+  iniciarApp();   // owned vazio -> escolha inicial
 }
 
 /* ===================================================================
@@ -1030,7 +1116,7 @@ function atualizarSomUI(){
 
 /* ---------- Ligações de UI ---------- */
 document.addEventListener("DOMContentLoaded", ()=>{
-  atualizarMenu();
+  iniciarApp();   // menu, ou escolha inicial se ainda não tem cartas
 
   // Som: desbloqueia áudio no 1º gesto, clique geral nos botões, e botões de mudo
   document.addEventListener("pointerdown", ()=>Som.ensure(), {once:true});
@@ -1074,6 +1160,9 @@ document.addEventListener("DOMContentLoaded", ()=>{
   // modal detalhe da carta
   $("#btn-carta-fechar").addEventListener("click", ()=>{ $("#modal-carta").hidden = true; });
   $("#modal-carta").addEventListener("click", e=>{ if(e.target.id === "modal-carta") $("#modal-carta").hidden = true; });
+
+  // escolha inicial de 3 Pokémon
+  $("#btn-ini-confirmar").addEventListener("click", confirmarInicial);
 
   // seleção de time
   $("#btn-sel-confirmar").addEventListener("click", confirmarSelecao);
