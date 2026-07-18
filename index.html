@@ -2,8 +2,34 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Super Pokémon — Jogo de Cartas</title>
+<meta name="description" content="Jogo de cartas estilo Super Trunfo: campanha de 25 níveis, duelos por pontos de vida, pacotes de cartas e coleção.">
+<meta name="theme-color" content="#2a75bb">
+
+<!-- Favicon / ícones de atalho -->
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="Super Pokémon">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<!-- Compartilhamento (WhatsApp / redes sociais) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Super Pokémon">
+<meta property="og:title" content="Super Pokémon — Jogo de Cartas">
+<meta property="og:description" content="Campanha de 25 níveis, duelos por pontos de vida, pacotes de cartas e coleção. Jogue no navegador!">
+<meta property="og:url" content="https://super-poke-card.vercel.app/">
+<meta property="og:image" content="https://super-poke-card.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Super Pokémon — Jogo de Cartas">
+<meta name="twitter:description" content="Campanha, duelos por pontos de vida e pacotes de cartas. Jogue no navegador!">
+<meta name="twitter:image" content="https://super-poke-card.vercel.app/og-image.png">
+
 <link rel="stylesheet" href="css/estilo.css">
 <link rel="preconnect" href="https://raw.githubusercontent.com">
 </head>
@@ -101,26 +127,39 @@
 
   <!-- ===== TELA LOJA ===== -->
   <section id="tela-loja" class="tela">
-    <header class="sub-header fixo">
-      <div class="sub-header-linha">
-        <h2>🛒 Loja</h2>
-        <span class="chip">💰 <b id="loja-pontos">0</b> pts</span>
-        <input type="search" id="loja-busca" placeholder="Buscar nome...">
-        <button class="btn btn-sec" id="btn-loja-voltar">Voltar</button>
-      </div>
-      <div class="filtro-loja">
-        <button class="btn filtro-btn ativo" data-filtro="todos">Todos</button>
-        <button class="btn filtro-btn" data-filtro="adquiridos">✔ Adquiridos</button>
-        <button class="btn filtro-btn" data-filtro="faltam">🛒 Faltam</button>
-      </div>
+    <header class="sub-header">
+      <h2>🛒 Loja</h2>
+      <span class="chip">💰 <b id="loja-pontos">0</b> pts</span>
+      <button class="btn btn-sec" id="btn-loja-voltar">Voltar</button>
     </header>
+    <div id="loja-msg"></div>
+
+    <h3 class="loja-secao">📦 Pacotes de cartas <small>(cada um vem com 2 cartas aleatórias)</small></h3>
+    <div id="pacotes-grid"></div>
+
     <div class="loja-vida">
       <span class="loja-vida-info">❤️ Vida máxima (Campanha Vida): <b id="loja-vidamax">50</b></span>
       <button class="btn btn-vida" id="btn-comprar-vida">+25 de vida · 💰 <b id="loja-vida-custo">100</b></button>
     </div>
-    <p class="sub-desc">Cartas cinzas ainda não foram compradas — clique para comprar. O preço depende da raridade.</p>
-    <div id="loja-msg"></div>
-    <div id="loja-grid"></div>
+
+    <!-- Loja de cartas avulsas (só depois de zerar a campanha) -->
+    <div id="loja-avulsa-bloqueada" class="loja-bloqueada" hidden>
+      🔒 <b>Loja de cartas avulsas bloqueada</b><br>
+      Vença a <b>Campanha tradicional</b> (25 níveis) para poder comprar Pokémon específicos.
+      Por enquanto, consiga cartas nos <b>pacotes</b> acima e nas batalhas!
+    </div>
+    <div id="loja-avulsa" hidden>
+      <div class="loja-avulsa-topo">
+        <h3 class="loja-secao">🃏 Cartas avulsas</h3>
+        <input type="search" id="loja-busca" placeholder="Buscar nome...">
+        <div class="filtro-loja">
+          <button class="btn filtro-btn ativo" data-filtro="todos">Todos</button>
+          <button class="btn filtro-btn" data-filtro="adquiridos">✔ Adquiridos</button>
+          <button class="btn filtro-btn" data-filtro="faltam">🛒 Faltam</button>
+        </div>
+      </div>
+      <div id="loja-grid"></div>
+    </div>
   </section>
 
   <!-- ===== TELA DE JOGO ===== -->
@@ -294,6 +333,17 @@
         <div id="modal-carta-desc" class="carta-desc"></div>
       </div>
       <button class="btn btn-grande" id="btn-carta-fechar">Fechar</button>
+    </div>
+  </div>
+
+  <!-- ===== MODAL ABERTURA DE PACOTE ===== -->
+  <div id="modal-pacote" class="modal" hidden>
+    <div id="pacote-confete"></div>
+    <div class="modal-box modal-pacote-box">
+      <h2 id="pacote-titulo">📦 Pacote</h2>
+      <p class="pacote-sub">Você abriu e recebeu:</p>
+      <div id="pacote-cartas"></div>
+      <button class="btn btn-grande" id="btn-pacote-fechar">Show! ▶</button>
     </div>
   </div>
 

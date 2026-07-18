@@ -74,6 +74,57 @@ body{
   border-radius:5px;transition:width .45s ease}
 .hp-fill.baixa{background:linear-gradient(90deg,#e3350d,#ff9d8a)}
 
+/* ===== LOJA: PACOTES (booster) ===== */
+.loja-secao{width:100%;font-size:1.05rem;color:#fff;margin-top:6px}
+.loja-secao small{font-weight:600;opacity:.7;font-size:.78rem}
+#pacotes-grid{width:100%;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.pacote-item{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+  border:none;font:inherit;cursor:pointer;color:#fff;padding:14px 12px;border-radius:16px;
+  background:linear-gradient(160deg,var(--pc,#666),rgba(0,0,0,.55));
+  box-shadow:var(--sombra);border:2px solid rgba(255,255,255,.35);transition:transform .12s,filter .12s}
+.pacote-item:hover{transform:translateY(-4px);filter:brightness(1.12)}
+.pacote-item.caro{opacity:.55}
+.pacote-emoji{font-size:2.4rem;line-height:1}
+.pacote-nome{font-weight:900;font-size:1rem}
+.pacote-chances{font-size:.66rem;opacity:.9;line-height:1.3}
+.pacote-preco{font-weight:800;font-size:.85rem;background:rgba(0,0,0,.35);
+  padding:3px 10px;border-radius:999px;margin-top:2px}
+
+/* aviso de loja avulsa bloqueada */
+.loja-bloqueada{width:100%;text-align:center;line-height:1.6;color:#dfe8ff;
+  background:rgba(0,0,0,.3);border:1px dashed rgba(255,255,255,.3);
+  border-radius:14px;padding:16px}
+.loja-avulsa-topo{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.loja-avulsa-topo input{flex:1;min-width:140px;font:inherit;padding:8px 12px;border-radius:8px;border:none}
+
+/* modal de abertura de pacote */
+.modal .modal-pacote-box{max-width:760px;text-align:center}
+.modal-pacote-box h2{color:var(--amarelo)}
+.pacote-sub{color:#dfe8ff;margin-bottom:14px}
+#pacote-cartas{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.pacote-carta-rev{position:relative;animation:revelaBox .5s ease}
+.pacote-carta-rev .carta{width:250px}
+@media(max-width:620px){ .pacote-carta-rev .carta{width:170px} #pacote-cartas{gap:10px} }
+.pacote-badge{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  padding:4px 12px;border-radius:999px;font-weight:800;font-size:.72rem;white-space:nowrap;
+  box-shadow:0 3px 8px rgba(0,0,0,.45)}
+.pacote-badge.nova{background:var(--amarelo);color:var(--tinta)}
+.pacote-badge.rep{background:#5a6478;color:#fff}
+#pacote-confete{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:70}
+#pacote-confete i{position:absolute;top:-14px;width:9px;height:15px;border-radius:2px;
+  animation:cair linear forwards}
+
+/* venda e quantidade na coleção */
+.btn-vender{position:absolute;top:8px;right:8px;z-index:4;
+  border:none;border-radius:999px;background:rgba(0,0,0,.68);color:var(--amarelo);
+  font-size:.7rem;font-weight:800;padding:5px 9px;cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,.4);transition:transform .1s,background .1s}
+.btn-vender:hover{background:var(--verde);color:#fff;transform:scale(1.08)}
+.qtd-badge{position:absolute;top:38px;right:8px;z-index:3;
+  background:var(--azul);color:#fff;font-weight:900;font-size:.72rem;
+  padding:2px 9px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+
 /* botões/painel da Campanha Vida */
 .btn-vida{background:#c2185b}
 .loja-vida{width:100%;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
@@ -333,7 +384,7 @@ body{
 #col-grid .carta-nome{margin-top:14px}
 #col-msg{width:100%;text-align:center;color:#fff;font-weight:700;max-height:0;overflow:hidden;
   transition:all .2s;opacity:0}
-#col-msg.show{max-height:50px;padding:8px;opacity:1;background:rgba(227,53,13,.9);border-radius:10px;margin-top:8px}
+#col-msg.show{max-height:50px;padding:8px;opacity:1;background:rgba(59,181,74,.92);border-radius:10px;margin-top:8px}
 
 /* ===== EMPATE ===== */
 #fim-titulo.empatou{color:var(--amarelo)}
@@ -641,4 +692,83 @@ body{
   .logo-super{font-size:1.5rem}
   .btn-grande{padding:12px 22px;font-size:1.05rem}
   .avatar-grande{width:60px;height:60px;font-size:2rem}
+}
+
+/* ===== TELA BAIXA (celular deitado / paisagem): comprime na VERTICAL ===== */
+@media (max-height:560px){
+  body{padding:6px}
+  .tela.ativa{gap:8px}
+  #tela-jogo.ativa{gap:4px}
+
+  /* placar fininho */
+  #placar{padding:4px 8px}
+  .placar-nome{font-size:.58rem;letter-spacing:0}
+  .placar-cartas{font-size:1.05rem}
+  #tela-jogo.modo-vida .placar-cartas{font-size:.85rem}
+  .hp-bar{width:52px;height:6px;margin-top:2px}
+  .avatar{width:26px;height:26px;font-size:1rem;border-width:2px}
+  .btn-mini{padding:2px 6px;font-size:.58rem}
+  .botoes-mini{gap:2px}
+  #oponente-info{font-size:.6rem}
+  #rodada-info{font-size:.7rem}
+  .mesa-info{font-size:.58rem;min-height:0}
+
+  /* cartas curtas: atributos em 2 colunas, só ícone + número */
+  .carta,.carta-verso{width:100%;max-width:158px}
+  .carta-verso{height:184px}
+  .carta-topo{padding:4px 7px 1px}
+  .carta-num{font-size:.56rem}
+  .tag-tipo{font-size:.44rem;padding:0 4px}
+  .carta-img{height:48px;margin:1px 7px 0}
+  .carta-img img{max-height:45px}
+  .carta-nome{font-size:.76rem;padding:1px 4px 0}
+  .carta-rar{font-size:.46rem;margin-bottom:1px;letter-spacing:.5px}
+  .carta-attrs{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,auto);
+    grid-auto-flow:column;gap:2px;padding:2px 5px 6px}
+  .attr{padding:2px 4px;border-width:1.5px;justify-content:center;gap:3px}
+  .attr .attr-nome>span{display:none}
+  .attr .attr-nome{gap:0}
+  .attr .attr-val{font-size:.82rem;padding-left:2px}
+  .ic{width:13px;height:13px}
+  #vs-texto{font-size:.9rem}
+  #mesa{gap:4px}
+
+  /* mãos: colunas laterais finas (sobra largura no modo paisagem) */
+  #arena{flex-direction:row;align-items:flex-start;gap:6px}
+  #mao,#mao-oponente{width:56px;max-height:210px;flex-direction:column;padding:4px 3px;overflow-y:auto}
+  #mao-oponente{order:0}
+  .mao-titulo{display:none}
+  #mao-lista,#mao-op-lista{flex-direction:column;gap:4px}
+  .mini-carta{width:100%;padding:2px;border-width:1.5px}
+  .mini-carta img{width:28px;height:24px}
+  .mini-nome{display:none}
+  .mini-rot{font-size:.4rem;padding:0 3px;top:-4px}
+  .mini-carta.mini-verso{height:32px}
+  .mini-carta.mini-verso::after{width:15px;height:15px;border-width:2px}
+  .mini-carta.mini-verso::before{width:4px;height:4px;border-width:2px}
+
+  /* ações e histórico bem compactos */
+  #turno-aviso{font-size:.72rem;min-height:14px;margin-top:0}
+  #turno-aviso .ic{width:14px;height:14px}
+  .btn-prox{font-size:.82rem;padding:6px 14px;margin-top:0}
+  .crono{width:22px;height:22px;margin-left:4px}
+  .crono .cr-num{font-size:.64rem}
+  #log-box{padding:4px 8px}
+  .log-titulo{font-size:.6rem;margin-bottom:2px;padding-bottom:2px}
+  #log{max-height:34px;font-size:.62rem}
+
+  /* telas de fim/menu também encolhem */
+  #fim-titulo{font-size:1.6rem}
+  #fim-sub{font-size:.85rem}
+  .crono-grande{width:52px;height:52px}
+  .crono-grande .cr-num{font-size:1.4rem}
+  .fim-crono-txt{font-size:.68rem}
+  #tela-fim{padding-top:2vh}
+  #tela-menu{padding-top:1vh}
+  .logo-pokemon{font-size:1.8rem}
+  .logo-super{font-size:1.1rem}
+  .logo-sub{font-size:.55rem}
+  .avatar-grande{width:48px;height:48px;font-size:1.6rem}
+  .menu-desc{font-size:.8rem}
+  .btn-grande{padding:9px 18px;font-size:.95rem}
 }

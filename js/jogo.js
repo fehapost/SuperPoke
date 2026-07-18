@@ -67,6 +67,21 @@ const PRECOS = {
   "Lendário":1200, "Lendário Supremo":2200, "Mítico":2600
 };
 function precoCarta(p){ return PRECOS[p.raridade] || 120; }
+function precoVenda(p){ return Math.floor(precoCarta(p) / 2); }   // vende por metade
+
+// Pacotes de raridade (booster) — cada pacote dá 2 cartas conforme a distribuição
+const PACOTES = [
+  {id:"comum",    nome:"Pacote Comum",       emoji:"📦", preco:500,  cor:"#8c98ad",
+    dist:{"Comum":50,"Incomum":30,"Raro":15,"Super Raro":5,"Lendário":0,"Lendário Supremo":0,"Mítico":0}},
+  {id:"incomum",  nome:"Pacote Incomum",     emoji:"🎁", preco:1000, cor:"#4caf50",
+    dist:{"Comum":30,"Incomum":35,"Raro":30,"Super Raro":5,"Lendário":0,"Lendário Supremo":0,"Mítico":0}},
+  {id:"raro",     nome:"Pacote Raro",        emoji:"💎", preco:2200, cor:"#2a75bb",
+    dist:{"Comum":15,"Incomum":25,"Raro":35,"Super Raro":20,"Lendário":5,"Lendário Supremo":0,"Mítico":0}},
+  {id:"lendario", nome:"Pacote Lendário",    emoji:"🏆", preco:4500, cor:"#e0a800",
+    dist:{"Comum":10,"Incomum":20,"Raro":22,"Super Raro":25,"Lendário":22,"Lendário Supremo":1,"Mítico":0}},
+  {id:"mitico",   nome:"Pacote Mitológico",  emoji:"🌟", preco:9000, cor:"#c2185b",
+    dist:{"Comum":5,"Incomum":10,"Raro":16,"Super Raro":30,"Lendário":33,"Lendário Supremo":5,"Mítico":1}},
+];
 
 // Escada de 25 oponentes (estilo Mortal Kombat) — sobe de dificuldade pela raridade
 const NIVEIS = [
@@ -140,7 +155,7 @@ function progressoPadrao(){
   // owned vazio: o jogador escolhe seus 3 primeiros Pokémon na tela inicial
   return { owned: [], pontos: 0, nivel: 1, vitorias: 0, derrotas: 0,
            timeFavorito: [], nome: "Treinador", foto: "🧑",
-           nivelVida: 1, vidaMax: VIDA_INICIAL };
+           nivelVida: 1, vidaMax: VIDA_INICIAL, campanhaZerada: false };
 }
 function carregarProgresso(){
   try{
@@ -155,6 +170,7 @@ function carregarProgresso(){
         if(typeof o.foto !== "string") o.foto = "🧑";
         if(typeof o.nivelVida !== "number") o.nivelVida = 1;
         if(typeof o.vidaMax !== "number") o.vidaMax = VIDA_INICIAL;
+        if(typeof o.campanhaZerada !== "boolean") o.campanhaZerada = (o.nivel > MAX_NIVEL);
         return o;
       }
     }
@@ -165,7 +181,10 @@ function salvarProgresso(){
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify(progresso)); }catch(e){}
 }
 function cartaPorId(id){ return POKEMONS.find(p=>p.id===id); }
-function cartasPossuidas(){ return progresso.owned.map(cartaPorId).filter(Boolean); }
+// cartas ÚNICAS que o jogador possui (owned pode ter repetidas)
+function cartasPossuidas(){ return [...new Set(progresso.owned)].map(cartaPorId).filter(Boolean); }
+function qtdDe(id){ return progresso.owned.filter(x=>x===id).length; }
+function totalDistintas(){ return new Set(progresso.owned).size; }
 
 /* ---------- Utilidades ---------- */
 const $ = sel => document.querySelector(sel);
@@ -880,6 +899,7 @@ function abrirPremio(ctx){
   progresso.vitorias = (progresso.vitorias||0) + 1;
   if(primeiraVez && progresso.nivel < MAX_NIVEL) progresso.nivel++;
   const zerou = primeiraVez && ctx.nivel === MAX_NIVEL;
+  if(zerou) progresso.campanhaZerada = true;   // desbloqueia a loja de cartas avulsas
   salvarProgresso();
 
   mostrarTela("tela-premio");
@@ -1015,7 +1035,102 @@ function abrirLoja(){
   $("#loja-busca").value = "";
   $("#loja-msg").className = "";
   atualizarLojaVida();
-  renderLoja("");
+  renderPacotes();
+  // loja de cartas avulsas só depois de zerar a campanha tradicional
+  const desbloqueada = !!progresso.campanhaZerada;
+  $("#loja-avulsa").hidden = !desbloqueada;
+  $("#loja-avulsa-bloqueada").hidden = desbloqueada;
+  if(desbloqueada) renderLoja("");
+}
+
+/* ---------- Pacotes (booster) ---------- */
+function renderPacotes(){
+  $("#loja-pontos").textContent = progresso.pontos;
+  const cont = $("#pacotes-grid");
+  cont.innerHTML = "";
+  PACOTES.forEach(pac=>{
+    const pode = progresso.pontos >= pac.preco;
+    const el = document.createElement("button");
+    el.className = "pacote-item" + (pode ? "" : " caro");
+    el.style.setProperty("--pc", pac.cor);
+    // top-2 raridades do pacote para o rótulo
+    const topRar = Object.entries(pac.dist).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,3)
+      .map(([r,v])=>`${r} ${v}%`).join(" · ");
+    el.innerHTML =
+      `<span class="pacote-emoji">${pac.emoji}</span>`+
+      `<span class="pacote-nome">${pac.nome}</span>`+
+      `<span class="pacote-chances">${topRar}</span>`+
+      `<span class="pacote-preco">💰 ${pac.preco} · 2 cartas</span>`;
+    el.onclick = ()=>abrirPacote(pac);
+    cont.appendChild(el);
+  });
+}
+function sortearRaridade(dist){
+  const r = Math.random()*100;
+  let acc = 0;
+  for(const rar in dist){ acc += dist[rar]; if(r < acc) return rar; }
+  // fallback: última raridade com chance > 0
+  const comChance = Object.keys(dist).filter(k=>dist[k]>0);
+  return comChance[comChance.length-1] || "Comum";
+}
+function abrirPacote(pac){
+  if(progresso.pontos < pac.preco){
+    Som.play("erro");
+    flashLoja(`Ouro insuficiente para o ${pac.nome} — faltam ${pac.preco-progresso.pontos} pts`, true);
+    return;
+  }
+  progresso.pontos -= pac.preco;
+  const ganhos = [];
+  for(let i=0;i<2;i++){
+    let rar = sortearRaridade(pac.dist);
+    let pool = POKEMONS.filter(p=>p.raridade===rar);
+    if(!pool.length) pool = POKEMONS.filter(p=>p.raridade==="Comum");
+    if(!pool.length) pool = POKEMONS;
+    const p = pool[Math.floor(Math.random()*pool.length)];
+    const jaTinha = progresso.owned.includes(p.id);
+    progresso.owned.push(p.id);   // permite repetidas
+    ganhos.push({id:p.id, repetida:jaTinha});
+  }
+  salvarProgresso();
+  Som.play("comprar");
+  mostrarAberturaPacote(pac, ganhos);
+}
+function mostrarAberturaPacote(pac, ganhos){
+  const grid = $("#pacote-cartas");
+  grid.innerHTML = "";
+  ganhos.forEach(g=>{
+    const p = cartaPorId(g.id);
+    const el = document.createElement("div");
+    el.className = "pacote-carta-rev";
+    el.innerHTML = htmlCarta(p, {}) +
+      (g.repetida ? `<div class="pacote-badge rep">repetida · vale ${precoVenda(p)} pts</div>`
+                  : `<div class="pacote-badge nova">✨ NOVA!</div>`);
+    grid.appendChild(el);
+  });
+  $("#pacote-titulo").textContent = `${pac.emoji} ${pac.nome}`;
+  confetePacote();
+  $("#modal-pacote").hidden = false;
+}
+function fecharPacote(){
+  $("#modal-pacote").hidden = true;
+  atualizarLojaVida();
+  renderPacotes();
+  if(progresso.campanhaZerada) renderLoja($("#loja-busca").value);
+}
+function confetePacote(){
+  const c = $("#pacote-confete");
+  if(!c) return;
+  c.innerHTML = "";
+  const cores = ["#ffcb05","#2a75bb","#e3350d","#3bb54a","#23c6d6","#f48fb1"];
+  for(let i=0;i<40;i++){
+    const d = document.createElement("i");
+    d.style.left = (Math.random()*100)+"%";
+    d.style.background = cores[i%cores.length];
+    d.style.animationDelay = (Math.random()*0.5)+"s";
+    d.style.animationDuration = (1.4+Math.random()*1.2)+"s";
+    c.appendChild(d);
+  }
+  setTimeout(()=>{ c.innerHTML = ""; }, 3200);
 }
 function atualizarLojaVida(){
   $("#loja-vidamax").textContent = progresso.vidaMax;
@@ -1103,7 +1218,7 @@ function abrirColecao(){
 function renderColecao(filtro){
   const f = (filtro||"").toLowerCase().trim();
   const grid = $("#col-grid");
-  $("#col-contagem").textContent = progresso.owned.length;
+  $("#col-contagem").textContent = totalDistintas();
   const fav = progresso.timeFavorito || [];
   $("#fav-contagem").textContent = fav.length;
   const lista = cartasPossuidas()
@@ -1116,16 +1231,43 @@ function renderColecao(filtro){
   }
   lista.forEach(p=>{
     const naEquipe = fav.includes(p.id);
+    const qtd = qtdDe(p.id);
     const el = document.createElement("div");
     el.className = "col-item" + (naEquipe ? " favorito" : "");
     el.dataset.id = p.id;
     el.innerHTML = htmlCarta(p, {}) +
       `<div class="fav-badge">${naEquipe ? "⭐ no time" : "☆ favoritar"}</div>`+
-      `<button class="btn-ver" title="Ver melhor">🔍</button>`;
+      `<button class="btn-ver" title="Ver melhor">🔍</button>`+
+      (qtd > 1 ? `<div class="qtd-badge">x${qtd}</div>` : "")+
+      `<button class="btn-vender" title="Vender por ${precoVenda(p)} pts">💰 ${precoVenda(p)}</button>`;
     el.querySelector(".btn-ver").onclick = (e)=>{ e.stopPropagation(); verCarta(p.id); };
+    el.querySelector(".btn-vender").onclick = (e)=>{ e.stopPropagation(); venderCarta(p.id); };
     el.onclick = ()=>toggleFavorito(p.id, el);
     grid.appendChild(el);
   });
+}
+// Vende UMA cópia da carta por metade do preço da raridade
+function venderCarta(id){
+  const idx = progresso.owned.indexOf(id);
+  if(idx < 0) return;
+  if(progresso.owned.length <= 1){
+    Som.play("erro");
+    flashColecao("Você não pode vender sua última carta!");
+    return;
+  }
+  const p = cartaPorId(id);
+  const valor = precoVenda(p);
+  progresso.owned.splice(idx, 1);
+  progresso.pontos += valor;
+  // se era a última cópia, tira do time favorito
+  if(!progresso.owned.includes(id)){
+    const fi = (progresso.timeFavorito||[]).indexOf(id);
+    if(fi >= 0) progresso.timeFavorito.splice(fi, 1);
+  }
+  salvarProgresso();
+  Som.play("comprar");
+  renderColecao($("#col-busca").value);
+  flashColecao(`💰 Vendeu ${p.nome} por ${valor} pts (saldo: ${progresso.pontos})`);
 }
 // Gera uma descrição a partir dos atributos (sem texto de Pokédex)
 function descricaoCarta(p){
@@ -1236,7 +1378,7 @@ function iniciarApp(){
 function atualizarMenu(){
   $("#chip-nivel").textContent  = progresso.nivel > MAX_NIVEL ? "MAX" : progresso.nivel;
   $("#chip-pontos").textContent = progresso.pontos;
-  $("#chip-cartas").textContent = progresso.owned.length;
+  $("#chip-cartas").textContent = totalDistintas();
   $("#menu-avatar").textContent = progresso.foto || "🧑";
   $("#menu-nome").textContent   = progresso.nome || "Treinador";
 }
@@ -1343,6 +1485,10 @@ document.addEventListener("DOMContentLoaded", ()=>{
     _filtroLoja = b.dataset.filtro;
     renderLoja($("#loja-busca").value);
   }));
+
+  // modal de abertura de pacote
+  $("#btn-pacote-fechar").addEventListener("click", fecharPacote);
+  $("#modal-pacote").addEventListener("click", e=>{ if(e.target.id === "modal-pacote") fecharPacote(); });
 
   // modal detalhe da carta
   $("#btn-carta-fechar").addEventListener("click", ()=>{ $("#modal-carta").hidden = true; });
