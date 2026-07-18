@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pokepoke",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/serve.js"],
+      "port": 8753
+    },
+    {
+      "name": "cartas",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/serve-cartas.js"],
+      "port": 8760
+    }
+  ]
+}

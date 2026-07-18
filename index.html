@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Pokémon — Jogo de Cartas</title>
+<link rel="stylesheet" href="css/estilo.css">
+<link rel="preconnect" href="https://raw.githubusercontent.com">
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== TELA INICIAL ===== -->
+  <section id="tela-menu" class="tela ativa">
+    <div class="logo">
+      <span class="logo-super">SUPER</span>
+      <span class="logo-pokemon">POKÉMON</span>
+      <span class="logo-sub">FORÇA · ATAQUE · DEFESA · AGILIDADE · VIDA · INTELIGÊNCIA</span>
+    </div>
+
+    <div class="perfil-menu">
+      <div class="avatar avatar-grande" id="menu-avatar">🧑</div>
+      <div class="perfil-nome" id="menu-nome">Treinador</div>
+      <button class="btn btn-mini" id="btn-config">⚙️ Configurações</button>
+    </div>
+
+    <div class="menu-chips">
+      <span class="chip">🏅 Nível <b id="chip-nivel">1</b></span>
+      <span class="chip">💰 <b id="chip-pontos">0</b> pts</span>
+      <span class="chip">🃏 <b id="chip-cartas">3</b> cartas</span>
+    </div>
+
+    <p class="menu-desc">
+      Comece com 3 cartas fracas e suba a escada de oponentes cada vez mais fortes.
+      Vença batalhas, ganhe pontos e compre cartas melhores na <b>Loja</b>!
+    </p>
+
+    <div class="menu-botoes">
+      <button class="btn btn-grande" id="btn-campanha">⚔️ CAMPANHA</button>
+    </div>
+    <div class="menu-botoes">
+      <button class="btn btn-sec" id="btn-loja">🛒 Loja</button>
+      <button class="btn btn-sec" id="btn-colecao">🃏 Coleção</button>
+      <button class="btn btn-sec" id="btn-livre">⚡ Batalha livre</button>
+    </div>
+    <div class="menu-botoes">
+      <button class="btn btn-reset js-som">🔊</button>
+      <button class="btn btn-reset" id="btn-reset">↺ Reiniciar progresso</button>
+    </div>
+  </section>
+
+  <!-- ===== TELA CONFIGURAÇÕES ===== -->
+  <section id="tela-config" class="tela">
+    <header class="sub-header">
+      <h2>⚙️ Configurações</h2>
+      <button class="btn btn-sec" id="btn-config-voltar">Voltar</button>
+    </header>
+    <div class="config-box">
+      <div class="config-avatar-preview" id="config-avatar-preview">🧑</div>
+      <label class="config-campo">
+        <span>Nome do treinador</span>
+        <input type="text" id="config-nome" maxlength="16" placeholder="Seu nome">
+      </label>
+      <div class="config-campo">
+        <span>Foto (avatar)</span>
+        <div id="config-avatares" class="avatar-grid"></div>
+      </div>
+      <div class="config-campo linha">
+        <span>Som</span>
+        <button class="btn js-som" id="config-som">🔊</button>
+      </div>
+      <button class="btn btn-grande" id="btn-config-salvar">💾 Salvar</button>
+      <button class="btn btn-reset" id="btn-config-reset">↺ Reiniciar todo o progresso</button>
+    </div>
+  </section>
+
+  <!-- ===== TELA CAMPANHA ===== -->
+  <section id="tela-campanha" class="tela">
+    <header class="sub-header">
+      <h2>⚔️ Campanha</h2>
+      <span class="chip">💰 <b id="camp-pontos">0</b> pts</span>
+      <button class="btn btn-sec" id="btn-camp-voltar">Voltar</button>
+    </header>
+    <p class="sub-desc">Derrote os oponentes em ordem — cada um é mais forte que o anterior. Cada vitória rende pontos.</p>
+    <div id="campanha-lista"></div>
+  </section>
+
+  <!-- ===== TELA LOJA ===== -->
+  <section id="tela-loja" class="tela">
+    <header class="sub-header fixo">
+      <div class="sub-header-linha">
+        <h2>🛒 Loja</h2>
+        <span class="chip">💰 <b id="loja-pontos">0</b> pts</span>
+        <input type="search" id="loja-busca" placeholder="Buscar nome...">
+        <button class="btn btn-sec" id="btn-loja-voltar">Voltar</button>
+      </div>
+      <div class="filtro-loja">
+        <button class="btn filtro-btn ativo" data-filtro="todos">Todos</button>
+        <button class="btn filtro-btn" data-filtro="adquiridos">✔ Adquiridos</button>
+        <button class="btn filtro-btn" data-filtro="faltam">🛒 Faltam</button>
+      </div>
+    </header>
+    <p class="sub-desc">Cartas cinzas ainda não foram compradas — clique para comprar. O preço depende da raridade.</p>
+    <div id="loja-msg"></div>
+    <div id="loja-grid"></div>
+  </section>
+
+  <!-- ===== TELA DE JOGO ===== -->
+  <section id="tela-jogo" class="tela">
+    <div id="efeito-camada"></div>
+    <header id="placar">
+      <div class="placar-canto esq">
+        <div class="botoes-mini">
+          <button class="btn btn-mini" id="btn-regras">📖 Regras</button>
+          <button class="btn btn-mini js-som">🔊</button>
+        </div>
+        <div class="avatar avatar-jogador" id="avatar-jogador">🧑</div>
+        <div class="placar-lado meu">
+          <span class="placar-nome" id="nome-jogador">VOCÊ</span>
+          <span class="placar-cartas" id="cartas-jogador">0</span>
+        </div>
+      </div>
+      <div class="placar-centro">
+        <span id="oponente-info" class="oponente-info"></span>
+        <span id="rodada-info">Rodada 1</span>
+        <span id="mesa-info" class="mesa-info"></span>
+      </div>
+      <div class="placar-canto dir">
+        <div class="placar-lado cpu">
+          <span class="placar-nome">OPONENTE</span>
+          <span class="placar-cartas" id="cartas-cpu">0</span>
+        </div>
+        <div class="avatar avatar-oponente" id="avatar-oponente">🤖</div>
+        <button class="btn btn-mini sair" id="btn-sair">✕ Sair</button>
+      </div>
+    </header>
+
+    <div id="arena">
+      <aside id="mao">
+        <div class="mao-titulo">VOCÊ ▾</div>
+        <div id="mao-lista"></div>
+      </aside>
+      <div id="mesa">
+        <div class="slot-carta"><div id="carta-jogador"></div></div>
+        <div id="vs"><span id="vs-texto">VS</span></div>
+        <div class="slot-carta"><div id="carta-cpu"></div></div>
+      </div>
+      <aside id="mao-oponente">
+        <div class="mao-titulo">OPONENTE ▾</div>
+        <div id="mao-op-lista"></div>
+      </aside>
+    </div>
+
+    <div id="turno-aviso"></div>
+
+    <div id="acoes">
+      <button class="btn btn-prox" id="btn-proxima" hidden>Próxima rodada ▶</button>
+    </div>
+
+    <div id="log-box">
+      <div class="log-titulo">📜 Histórico da batalha</div>
+      <div id="log"></div>
+    </div>
+  </section>
+
+  <!-- ===== TELA SELEÇÃO DE TIME ===== -->
+  <section id="tela-selecao" class="tela">
+    <header class="sub-header fixo">
+      <div class="sub-header-linha">
+        <h2>🎴 Monte seu time</h2>
+        <span class="chip">Selecionadas: <b id="sel-contagem">0</b>/5</span>
+        <button class="btn btn-grande" id="btn-sel-confirmar" disabled>Batalhar ▶</button>
+        <button class="btn btn-sec" id="btn-sel-voltar">Voltar</button>
+      </div>
+      <div class="stats-linha">
+        <span class="chip">💰 <b id="sel-pontos">0</b> pts</span>
+        <span class="chip">✔ <b id="sel-vit">0</b> vitórias</span>
+        <span class="chip">✘ <b id="sel-der">0</b> derrotas</span>
+        <span class="chip">📊 <b id="sel-perc">0</b>% aproveit.</span>
+        <span class="chip">🎮 <b id="sel-part">0</b> partidas</span>
+      </div>
+    </header>
+    <p class="sub-desc" id="sel-recompensa"></p>
+    <p class="sub-desc">Escolha até <b>5 cartas</b> do seu baralho para levar ao desafio. Clique nas cartas para selecionar.</p>
+    <div id="sel-grid"></div>
+  </section>
+
+  <!-- ===== TELA PRÊMIO (recompensa da vitória) ===== -->
+  <section id="tela-premio" class="tela">
+    <div id="confete"></div>
+    <h1 id="premio-titulo">🏆 VITÓRIA!</h1>
+    <p id="premio-sub"></p>
+    <p id="premio-instru">Escolha uma carta do baralho derrotado para levar:</p>
+    <div id="premio-grid"></div>
+    <div id="premio-acoes" class="menu-botoes"></div>
+
+    <!-- overlay de revelação da carta ganha -->
+    <div id="premio-reveal" hidden>
+      <div class="reveal-box">
+        <p class="reveal-titulo">🎉 Você ganhou!</p>
+        <div id="reveal-carta"></div>
+        <button class="btn btn-grande" id="btn-reveal-ok">OK ▶</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TELA FIM ===== -->
+  <section id="tela-fim" class="tela">
+    <h1 id="fim-titulo"></h1>
+    <p id="fim-sub"></p>
+    <div id="fim-acoes" class="menu-botoes"></div>
+  </section>
+
+  <!-- ===== TELA COLEÇÃO ===== -->
+  <section id="tela-colecao" class="tela">
+    <header class="sub-header fixo">
+      <div class="sub-header-linha">
+        <h2>🃏 Minha Coleção (<span id="col-contagem">0</span>)</h2>
+        <span class="chip">⭐ Time favorito: <b id="fav-contagem">0</b>/5</span>
+        <input type="search" id="col-busca" placeholder="Buscar nome...">
+        <button class="btn btn-sec" id="btn-col-voltar">Voltar</button>
+      </div>
+      <p class="sub-desc" style="margin:0">Clique nas cartas para montar seu <b>Time Favorito</b> (até 5) — ele já vem selecionado nos desafios.</p>
+    </header>
+    <div id="col-msg"></div>
+    <div id="col-grid"></div>
+  </section>
+
+  <!-- ===== MODAL DE REGRAS ===== -->
+  <div id="modal-regras" class="modal" hidden>
+    <div class="modal-box">
+      <h2>📖 Como jogar</h2>
+      <ul class="regras-lista">
+        <li><b>Objetivo:</b> eliminar todas as cartas do oponente. Você perde se ficar sem cartas.</li>
+        <li><b>Cada rodada:</b> quem tem a vez escolhe um dos 6 atributos (Vida, Força, Ataque, Defesa, Agilidade, Inteligência). Compara-se o mesmo atributo das duas cartas do topo.</li>
+        <li><b>Maior valor vence.</b> A carta <b>derrotada sai do jogo</b> (é eliminada). A carta vencedora volta para o fundo do seu baralho.</li>
+        <li><b>Quem vence a rodada</b> escolhe o atributo da rodada seguinte.</li>
+        <li><b>Empate:</b> ninguém é eliminado — as duas cartas voltam para o fundo dos baralhos.</li>
+        <li><b>Turno do oponente:</b> ele mostra o atributo escolhido e há uma pausa de 2s. No seu turno, a próxima rodada tem um timer de 6s.</li>
+        <li><b>Prêmio:</b> ao vencer a batalha, você leva 1 carta do baralho do adversário para a sua coleção!</li>
+      </ul>
+      <button class="btn btn-grande" id="btn-regras-fechar">Entendi!</button>
+    </div>
+  </div>
+
+  <!-- ===== MODAL BATALHA LIVRE (2 modos) ===== -->
+  <div id="modal-livre" class="modal" hidden>
+    <div class="modal-box">
+      <h2>⚡ Batalha livre</h2>
+      <p style="color:#dfe8ff;margin-bottom:16px">Como você quer batalhar?</p>
+      <div class="livre-opcoes">
+        <button class="btn livre-op" id="btn-livre-meu">
+          <span class="op-titulo">🏅 Com seus Pokémon</span>
+          <span class="op-desc">Usa seu time favorito · <b>ganha ouro</b> e pode achar lendários!</span>
+        </button>
+        <button class="btn livre-op sec" id="btn-livre-qualquer">
+          <span class="op-titulo">🎲 Com qualquer Pokémon</span>
+          <span class="op-desc">Pokémon aleatórios dos dois lados · <b>sem ouro</b>, só diversão.</span>
+        </button>
+      </div>
+      <button class="btn btn-sec" id="btn-livre-cancelar">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- ===== MODAL DETALHE DA CARTA ===== -->
+  <div id="modal-carta" class="modal" hidden>
+    <div class="modal-box modal-carta-box">
+      <div class="modal-carta-conteudo">
+        <div id="modal-carta-frente"></div>
+        <div id="modal-carta-desc" class="carta-desc"></div>
+      </div>
+      <button class="btn btn-grande" id="btn-carta-fechar">Fechar</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/dados.js"></script>
+<script src="js/som.js"></script>
+<script src="js/jogo.js"></script>
+</body>
+</html>

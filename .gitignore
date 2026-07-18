@@ -1,0 +1,9 @@
+# backups e temporários
+Pokemons_Status_ORIGINAL.xlsx
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# config local do editor/harness
+.claude/settings.local.json

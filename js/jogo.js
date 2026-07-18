@@ -1,0 +1,1096 @@
+/* ===== Super Pokémon — Jogo de Cartas (Campanha + Loja) ===== */
+"use strict";
+
+// Ícones SVG das habilidades (estilo Super Pokémon: anel colorido + glifo em fundo branco)
+const ICONES = {
+  vida:
+    '<svg class="ic" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#fff" stroke="#e01f26" stroke-width="2"/>'+
+    '<path d="M14 21.5C8.5 17 6 14.2 6 11.2A3.8 3.8 0 0 1 14 8.7A3.8 3.8 0 0 1 22 11.2C22 14.2 19.5 17 14 21.5Z" fill="#e01f26"/></svg>',
+  forca:
+    '<svg class="ic" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#fff" stroke="#ef4a1e" stroke-width="2"/>'+
+    '<g fill="#ef4a1e"><rect x="8" y="13" width="11" height="6.6" rx="2"/><circle cx="9.6" cy="13" r="1.5"/>'+
+    '<circle cx="12.5" cy="12.6" r="1.6"/><circle cx="15.4" cy="12.7" r="1.6"/><circle cx="18" cy="13.2" r="1.4"/>'+
+    '<path d="M8 15.6l-1.9-1.2a1 1 0 0 1 1.1-1.6L9 13.6z"/></g></svg>',
+  inteligencia:
+    '<svg class="ic" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#fff" stroke="#23c6d6" stroke-width="2"/>'+
+    '<path d="M14 5.5 15.3 10.9 20 8 17.1 12.7 22.5 14 17.1 15.3 20 20 15.3 17.1 14 22.5 12.7 17.1 8 20 10.9 15.3 5.5 14 10.9 12.7 8 8 12.7 10.9Z" fill="#23c6d6"/></svg>',
+  ataque:
+    '<svg class="ic" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#fff" stroke="#f15a22" stroke-width="2"/>'+
+    '<g fill="#f15a22"><path d="M14 4 16 7 16 16 12 16 12 7Z"/><rect x="9.5" y="15.6" width="9" height="2.2" rx="1"/>'+
+    '<rect x="13" y="17.8" width="2" height="5.2" rx="1"/></g></svg>',
+  defesa:
+    '<svg class="ic" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#fff" stroke="#f5a623" stroke-width="2"/>'+
+    '<path d="M14 5 21 7.3V12.5C21 16.5 18 19.7 14 21.3 10 19.7 7 16.5 7 12.5V7.3Z" fill="#f5a623"/>'+
+    '<path d="M14 9.5 15.5 12.5 18.8 13 16.4 15.3 17 18.6 14 17 11 18.6 11.6 15.3 9.2 13 12.5 12.5Z" fill="#fff"/></svg>',
+  agilidade:
+    '<svg class="ic" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#fff" stroke="#67c327" stroke-width="2"/>'+
+    '<circle cx="16" cy="14" r="6" fill="#67c327"/>'+
+    '<g stroke="#67c327" stroke-width="1.8" stroke-linecap="round" fill="none">'+
+    '<path d="M8 10.5H5"/><path d="M8 14H3.5"/><path d="M8 17.5H5"/></g></svg>',
+};
+
+const ATRIBUTOS = [
+  {chave:"vida",         nome:"VIDA",         svg:ICONES.vida},
+  {chave:"forca",        nome:"FORÇA",        svg:ICONES.forca},
+  {chave:"ataque",       nome:"ATAQUE",       svg:ICONES.ataque},
+  {chave:"defesa",       nome:"DEFESA",       svg:ICONES.defesa},
+  {chave:"agilidade",    nome:"AGILIDADE",    svg:ICONES.agilidade},
+  {chave:"inteligencia", nome:"INTELIGÊNCIA", svg:ICONES.inteligencia},
+];
+
+// Cores de fundo da carta por tipo (Tipo 1 -> Tipo 2)
+const CORES_TIPO = {
+  GRAMA:"#4caf50", VENENO:"#9c4dcc", FOGO:"#ff7043", AGUA:"#42a5f5",
+  ELETRICO:"#ffca28", GELO:"#4dd0e1", LUTADOR:"#d84343", TERRA:"#c9975b",
+  VOADOR:"#90b4f0", PSIQUICO:"#f06292", INSETO:"#9ccc35", PEDRA:"#a1887f",
+  FANTASMA:"#7e57c2", DRAGAO:"#5c6bc0", NORMAL:"#9e9e9e", METALICO:"#90a4ae",
+  ACO:"#90a4ae", FADA:"#f48fb1", NOTURNO:"#5d4037", "":"#607d8b"
+};
+function corTipo(t){
+  const k = (t||"").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  return CORES_TIPO[k] || "#607d8b";
+}
+
+const SPRITE = id =>
+  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+const SPRITE_FALLBACK = id =>
+  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+
+/* ===================================================================
+   PROGRESSÃO / ECONOMIA
+   =================================================================== */
+const SAVE_KEY = "superpoke_save_v2";
+const CARTAS_INICIAIS = [10, 13, 16];          // Caterpie, Weedle, Pidgey (3 fracas)
+
+const PRECOS = {
+  "Comum":60, "Incomum":150, "Raro":320, "Super Raro":650,
+  "Lendário":1200, "Lendário Supremo":2200, "Mítico":2600
+};
+function precoCarta(p){ return PRECOS[p.raridade] || 120; }
+
+// Escada de 25 oponentes (estilo Mortal Kombat) — sobe de dificuldade pela raridade
+const NIVEIS = [
+  {n:1,  nome:"Aprendiz Léo",       raridades:["Comum"]},
+  {n:2,  nome:"Colecionador Tavo",  raridades:["Comum"]},
+  {n:3,  nome:"Campista Bia",       raridades:["Comum","Incomum"]},
+  {n:4,  nome:"Escoteiro Rui",      raridades:["Incomum"]},
+  {n:5,  nome:"Líder Rocha",        raridades:["Incomum"]},
+  {n:6,  nome:"Domador Ígor",       raridades:["Incomum","Raro"]},
+  {n:7,  nome:"Nadadora Cora",      raridades:["Raro"]},
+  {n:8,  nome:"Feiticeira Morgana", raridades:["Raro"]},
+  {n:9,  nome:"Piromante Bruno",    raridades:["Raro","Super Raro"]},
+  {n:10, nome:"Líder Volt",         raridades:["Raro","Super Raro"]},
+  {n:11, nome:"Cientista Nyx",      raridades:["Super Raro"]},
+  {n:12, nome:"Ninja Kaze",         raridades:["Super Raro"]},
+  {n:13, nome:"Domador Fenris",     raridades:["Super Raro"]},
+  {n:14, nome:"Elite Drago",        raridades:["Super Raro","Lendário"]},
+  {n:15, nome:"Elite Vesper",       raridades:["Super Raro","Lendário"]},
+  {n:16, nome:"Elite Aurora",       raridades:["Lendário"]},
+  {n:17, nome:"Elite Ígnea",        raridades:["Lendário"]},
+  {n:18, nome:"Guardião Trovão",    raridades:["Lendário"]},
+  {n:19, nome:"Guardiã Maré",       raridades:["Lendário"]},
+  {n:20, nome:"Campeã Régulus",     raridades:["Lendário"]},
+  {n:21, nome:"Sábio do Tempo",     raridades:["Lendário","Mítico"]},
+  {n:22, nome:"Oráculo Celeste",    raridades:["Lendário","Mítico"]},
+  {n:23, nome:"Rainha Psíquica",    raridades:["Lendário","Lendário Supremo"]},
+  {n:24, nome:"Lorde Genético",     raridades:["Lendário Supremo","Mítico"]},
+  {n:25, nome:"MESTRE SUPREMO",     raridades:["Lendário","Lendário Supremo","Mítico"]},
+];
+const MAX_NIVEL = NIVEIS.length;
+
+// Ouro ganho ao derrotar o oponente do nível (base; +60 na 1ª vez que passa)
+function ouroBaseNivel(nivel){ return 25 + nivel*15; }
+function bonusPrimeiraVez(){ return 60; }
+function ehBoss(nivel){ return nivel >= 21; }   // bosses finais têm lendários garantidos
+
+let progresso = carregarProgresso();
+
+function progressoPadrao(){
+  return { owned: CARTAS_INICIAIS.slice(), pontos: 0, nivel: 1, vitorias: 0, derrotas: 0,
+           timeFavorito: [], nome: "Treinador", foto: "🧑" };
+}
+function carregarProgresso(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(raw){
+      const o = JSON.parse(raw);
+      if(o && Array.isArray(o.owned) && o.owned.length){
+        if(typeof o.vitorias !== "number") o.vitorias = 0;   // saves antigos
+        if(typeof o.derrotas !== "number") o.derrotas = 0;
+        if(!Array.isArray(o.timeFavorito)) o.timeFavorito = [];
+        if(typeof o.nome !== "string") o.nome = "Treinador";
+        if(typeof o.foto !== "string") o.foto = "🧑";
+        return o;
+      }
+    }
+  }catch(e){}
+  return progressoPadrao();
+}
+function salvarProgresso(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(progresso)); }catch(e){}
+}
+function cartaPorId(id){ return POKEMONS.find(p=>p.id===id); }
+function cartasPossuidas(){ return progresso.owned.map(cartaPorId).filter(Boolean); }
+
+/* ---------- Utilidades ---------- */
+const $ = sel => document.querySelector(sel);
+function mostrarTela(id){
+  document.querySelectorAll(".tela").forEach(t=>t.classList.remove("ativa"));
+  $("#"+id).classList.add("ativa");
+}
+function embaralhar(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+/* ---------- Renderização de carta ---------- */
+function htmlCarta(p, {interativa=false, destaque=null, resultado=null}={}){
+  const c1 = corTipo(p.tipo1);
+  const c2 = corTipo(p.tipo2 || p.tipo1);
+  const tipos = [p.tipo1, p.tipo2].filter(Boolean)
+    .map(t=>`<span class="tag-tipo">${t}</span>`).join("");
+  const attrs = ATRIBUTOS.map(a=>{
+    let cls = "attr attr-" + a.chave;   // contorno colorido por atributo
+    if(interativa) cls += " clicavel";
+    if(destaque === a.chave) cls += " escolhido";
+    if(resultado && resultado.chave === a.chave)
+      cls += resultado.venceu ? " venceu" : (resultado.venceu===false ? " perdeu" : "");
+    return `<div class="${cls}" data-attr="${a.chave}">
+        <span class="attr-nome">${a.svg}<span>${a.nome}</span></span>
+        <span class="attr-val">${p[a.chave]}</span>
+      </div>`;
+  }).join("");
+  return `<div class="carta flip-in" style="--c1:${c1};--c2:${c2}">
+    <div class="carta-topo">
+      <span class="carta-num">Nº ${String(p.id).padStart(3,"0")}</span>
+      <span class="carta-tipos">${tipos}</span>
+    </div>
+    <div class="carta-img">
+      <img src="${SPRITE(p.id)}" alt="${p.nome}" loading="lazy"
+           onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(p.id)}'">
+    </div>
+    <div class="carta-nome">${p.nome}</div>
+    <div class="carta-rar">${(p.raridade||"").toUpperCase()} · ESTÁGIO ${p.estagio}</div>
+    <div class="carta-attrs">${attrs}</div>
+  </div>`;
+}
+const htmlVerso = () => `<div class="carta-verso"></div>`;
+// Carta-mistério (lendários na loja): só um "?"
+const htmlCartaMisterio = () => `<div class="carta carta-misterio"><span class="misterio-interro">?</span>
+  <div class="misterio-txt">LENDÁRIO<br>MISTERIOSO</div></div>`;
+
+/* ===================================================================
+   BATALHA
+   =================================================================== */
+const MAX_RODADAS = 50;        // limite de rodadas -> empate
+const MAX_EMPATES_SEGUIDOS = 3; // empates seguidos -> empate
+
+const estado = {
+  jogador:[], cpu:[], rodada:0, eliminadas:0, premioPool:[],
+  elimJogador:[], elimCpu:[], empatesSeguidos:0,
+  turnoDe:"jogador", travado:false, contexto:{tipo:"livre"}
+};
+
+function iniciarBatalha(deckJogador, deckCpu, contexto){
+  estado.jogador = deckJogador.map(c=>({...c}));
+  estado.cpu     = deckCpu.map(c=>({...c}));
+  estado.rodada = 0;
+  estado.eliminadas = 0;
+  estado.elimJogador = [];
+  estado.elimCpu = [];
+  estado.empatesSeguidos = 0;
+  estado.turnoDe = "jogador";
+  estado.travado = false;
+  estado.contexto = contexto;
+  $("#log").innerHTML = "";
+  $("#efeito-camada").className = "";
+  $("#oponente-info").textContent = contexto.titulo || "";
+  // avatares
+  $("#avatar-jogador").textContent = progresso.foto || "🧑";
+  $("#nome-jogador").textContent = progresso.nome || "VOCÊ";
+  $("#avatar-oponente").textContent = contexto.avatarOp || "🤖";
+  mostrarTela("tela-jogo");
+  proximaRodada();
+}
+
+// Avatares de oponente por nível (visual temático da escada)
+const AVATARES_OPONENTE = ["🧒","🧢","🏕️","🥾","🪨","🐎","🏊","🧙‍♀️","🔥","⚡","🔬","🥷","🐺","🐉","🦇","🌌","🌋","🌩️","🌊","👑","⏳","🌠","🔮","🧬","💀"];
+function avatarDoNivel(nivel){ return AVATARES_OPONENTE[(nivel-1) % AVATARES_OPONENTE.length]; }
+
+// Oponentes têm de 3 a 5 cartas, crescendo com o nível
+function tamanhoDeckOponente(nivel){ return Math.min(5, 3 + Math.floor((nivel-1)/3)); }
+
+/* ---------- Lendários / Míticos ---------- */
+const RARIDADES_LENDARIAS = ["Lendário","Lendário Supremo","Mítico"];
+function ehLendario(p){ return RARIDADES_LENDARIAS.includes(p.raridade); }
+const IDS_ULTRA = [150, 151];   // Mewtwo, Mew -> 1%
+function idsLendarios(){ return POKEMONS.filter(ehLendario).map(p=>p.id); }
+// prêmio-surpresa: 1% Mewtwo/Mew, +5% demais lendários; devolve id ou null
+function rolarLendario(excluir){
+  excluir = excluir || [];
+  const r = Math.random();
+  let cand;
+  if(r < 0.01) cand = IDS_ULTRA.slice();
+  else if(r < 0.06) cand = idsLendarios().filter(id=>!IDS_ULTRA.includes(id));
+  else return null;
+  cand = cand.filter(id=>!excluir.includes(id));
+  return cand.length ? cand[Math.floor(Math.random()*cand.length)] : null;
+}
+
+// Baralho do oponente: cartas REAIS da raridade do nível (sem inflar stats).
+// A dificuldade vem da raridade/poder das cartas, não de multiplicador.
+function gerarDeckOponente(info, qtd){
+  let pool = POKEMONS.filter(p=>info.raridades.includes(p.raridade));
+  if(pool.length === 0) pool = POKEMONS.slice();
+  const emb = embaralhar(pool);
+  const deck = [], ids = [];
+  for(let i=0;i<qtd;i++){
+    const base = emb[i % emb.length];
+    deck.push({...base});
+    ids.push(base.id);
+  }
+  return {deck, ids};
+}
+
+function iniciarNivel(nivel, meuDeck){
+  const info = NIVEIS[nivel-1];
+  if(!meuDeck || !meuDeck.length){
+    meuDeck = embaralhar(cartasPossuidas()).slice(0, 5);
+    if(meuDeck.length === 0) meuDeck = CARTAS_INICIAIS.map(cartaPorId);
+  }
+  const {deck:cpuDeck, ids} = gerarDeckOponente(info, tamanhoDeckOponente(nivel));
+  // prêmio-surpresa de lendário (5%/1%) fora dos bosses
+  const surpresa = rolarLendario(ids.concat(progresso.owned));
+  if(surpresa) ids.push(surpresa);
+  iniciarBatalha(meuDeck, cpuDeck, {
+    tipo:"campanha", nivel,
+    titulo:`Nível ${nivel} · ${info.nome}`,
+    avatarOp: avatarDoNivel(nivel)
+  });
+  estado.premioPool = ids;   // definido após iniciarBatalha (que zera o estado)
+}
+
+/* ---------- Batalha livre (2 modos) ---------- */
+function escolherBatalhaLivre(){ $("#modal-livre").hidden = false; }
+function batalhaLivre(modo){
+  $("#modal-livre").hidden = true;
+  let meu, cpu;
+  if(modo === "meu"){
+    // com SEUS Pokémon (usa time favorito se houver, senão sorteia) — ganha ouro
+    let base = (progresso.timeFavorito && progresso.timeFavorito.length)
+      ? progresso.timeFavorito.map(cartaPorId).filter(Boolean)
+      : embaralhar(cartasPossuidas()).slice(0, 5);
+    if(!base.length) base = CARTAS_INICIAIS.map(cartaPorId);
+    meu = base;
+    cpu = embaralhar(POKEMONS.filter(p=>!ehLendario(p))).slice(0, base.length || 5);
+  } else {
+    // com QUALQUER Pokémon — não ganha ouro
+    const emb = embaralhar(POKEMONS).slice(0, 10);
+    meu = emb.slice(0,5); cpu = emb.slice(5,10);
+  }
+  iniciarBatalha(meu, cpu, {tipo:"livre", modo, titulo: modo==="meu" ? "Batalha livre (seus Pokémon)" : "Batalha livre"});
+  estado.premioPool = [];
+}
+
+/* ---------- Seleção de time (antes da campanha) ---------- */
+let _pendingNivel = 1;
+const _selecionadas = new Set();
+function escolherTimeParaNivel(nivel){
+  _pendingNivel = nivel;
+  _selecionadas.clear();
+  // pré-seleciona o time favorito (só cartas que possui, até 5)
+  (progresso.timeFavorito || []).forEach(id=>{
+    if(progresso.owned.includes(id) && _selecionadas.size < 5) _selecionadas.add(id);
+  });
+  mostrarTela("tela-selecao");
+  renderSelecao();
+}
+function renderSelecao(){
+  const grid = $("#sel-grid");
+  grid.innerHTML = "";
+  const cartas = cartasPossuidas().sort((a,b)=>a.id-b.id);
+  cartas.forEach(p=>{
+    const sel = _selecionadas.has(p.id);
+    const el = document.createElement("div");
+    el.className = "sel-item" + (sel ? " sel" : "");
+    el.dataset.id = p.id;
+    el.innerHTML = htmlCarta(p, {}) + (sel ? '<div class="sel-check">✔</div>' : "");
+    el.onclick = ()=>toggleSelecao(p.id, el);
+    grid.appendChild(el);
+  });
+  atualizarStatsSelecao();
+}
+function atualizarStatsSelecao(){
+  const v = progresso.vitorias||0, d = progresso.derrotas||0, part = v+d;
+  $("#sel-contagem").textContent = _selecionadas.size;
+  $("#btn-sel-confirmar").disabled = _selecionadas.size < 1;
+  $("#sel-pontos").textContent = progresso.pontos;
+  $("#sel-vit").textContent = v;
+  $("#sel-der").textContent = d;
+  $("#sel-perc").textContent = part ? Math.round(v/part*100) : 0;
+  $("#sel-part").textContent = part;
+  const info = NIVEIS[_pendingNivel-1];
+  const bonus = _pendingNivel === progresso.nivel ? bonusPrimeiraVez() : 0;
+  const ouro = ouroBaseNivel(_pendingNivel) + bonus;
+  $("#sel-recompensa").innerHTML =
+    `Nível ${_pendingNivel} · <b>${info.nome}</b> — vencendo você ganha <b class="ouro-txt">💰 ${ouro} de ouro</b>${bonus?" (bônus de 1ª vez)":""}`;
+}
+// Atualiza SÓ a carta clicada (gira ela, sem re-renderizar as outras)
+function toggleSelecao(id, el){
+  if(_selecionadas.has(id)){
+    _selecionadas.delete(id);
+  } else {
+    if(_selecionadas.size >= 5){ Som.play("erro"); return; }
+    _selecionadas.add(id);
+  }
+  Som.play("select");
+  const marcada = _selecionadas.has(id);
+  el.classList.toggle("sel", marcada);
+  let chk = el.querySelector(".sel-check");
+  if(marcada && !chk){
+    chk = document.createElement("div"); chk.className = "sel-check"; chk.textContent = "✔";
+    el.appendChild(chk);
+  } else if(!marcada && chk){ chk.remove(); }
+  // giro só desta carta
+  const carta = el.querySelector(".carta");
+  if(carta){ carta.classList.remove("girar"); void carta.offsetWidth; carta.classList.add("girar"); }
+  atualizarStatsSelecao();
+}
+function confirmarSelecao(){
+  const deck = [..._selecionadas].map(cartaPorId).filter(Boolean);
+  if(!deck.length) return;
+  iniciarNivel(_pendingNivel, deck);
+}
+
+function atualizarPlacar(){
+  $("#cartas-jogador").textContent = estado.jogador.length;
+  $("#cartas-cpu").textContent     = estado.cpu.length;
+  $("#rodada-info").textContent    = "Rodada " + estado.rodada;
+  $("#mesa-info").textContent = estado.eliminadas
+    ? `☠ ${estado.eliminadas} eliminada(s)` : "";
+  atualizarMao();
+  atualizarMaoOponente();
+}
+
+// mini-carta virada para baixo (verso)
+function miniVerso(){ return '<div class="mini-carta mini-verso"></div>'; }
+// mini-carta derrotada: visível, cinza, com corte vermelho
+function miniEliminada(p){
+  const c1 = corTipo(p.tipo1), c2 = corTipo(p.tipo2 || p.tipo1);
+  return `<div class="mini-carta eliminada" style="--c1:${c1};--c2:${c2}">
+      <span class="mini-rot morto">✘ KO</span>
+      <img src="${SPRITE(p.id)}" loading="lazy" alt="${p.nome}"
+           onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(p.id)}'">
+      <span class="mini-nome">${p.nome}</span>
+    </div>`;
+}
+
+// Mão do jogador: baralho (topo → fundo) + cartas eliminadas (cinza/KO)
+function atualizarMao(){
+  const cont = $("#mao-lista");
+  if(!cont) return;
+  let html = estado.jogador.map((p,i)=>{
+    const c1 = corTipo(p.tipo1), c2 = corTipo(p.tipo2 || p.tipo1);
+    const rot = i===0 ? '<span class="mini-rot atual">EM JOGO</span>'
+              : i===1 ? '<span class="mini-rot prox">PRÓXIMA</span>' : "";
+    return `<div class="mini-carta ${i===0?'atual':''} ${i===1?'proxima':''}" style="--c1:${c1};--c2:${c2}">
+        ${rot}
+        <img src="${SPRITE(p.id)}" loading="lazy" alt="${p.nome}"
+             onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(p.id)}'">
+        <span class="mini-nome">${p.nome}</span>
+      </div>`;
+  }).join("");
+  html += estado.elimJogador.map(miniEliminada).join("");
+  cont.innerHTML = html;
+}
+
+// Mão do oponente: cartas restantes VIRADAS PARA BAIXO + derrotadas visíveis (cinza/KO)
+function atualizarMaoOponente(){
+  const cont = $("#mao-op-lista");
+  if(!cont) return;
+  let html = estado.cpu.map(()=>miniVerso()).join("");
+  html += estado.elimCpu.map(miniEliminada).join("");
+  cont.innerHTML = html;
+}
+
+/* ---------- Temporizador da próxima rodada ---------- */
+let _tickTimer = null;
+function limparTimers(){ clearInterval(_tickTimer); _tickTimer = null; }
+function agendarProxima(segundos){
+  limparTimers();
+  const b = $("#btn-proxima");
+  let restante = segundos;
+  const render = ()=> b.innerHTML = `Próxima rodada ▶ <span class="cd">${restante}s</span>`;
+  b.hidden = false;
+  render();
+  b.onclick = ()=>{ limparTimers(); proximaRodada(); };
+  _tickTimer = setInterval(()=>{
+    restante--;
+    if(restante <= 0){ limparTimers(); proximaRodada(); }
+    else render();
+  }, 1000);
+}
+
+function proximaRodada(){
+  limparTimers();
+  if(estado.jogador.length === 0 || estado.cpu.length === 0) return finalizar();
+  // empate: 3 empates seguidos ou limite de rodadas
+  if(estado.empatesSeguidos >= MAX_EMPATES_SEGUIDOS || estado.rodada >= MAX_RODADAS)
+    return finalizar(true);
+  estado.rodada++;
+  estado.travado = false;
+  estado.chooserDaRodada = estado.turnoDe;   // quem escolhe nesta rodada
+  atualizarPlacar();
+
+  const meu = estado.jogador[0];
+  const seu = estado.cpu[0];
+
+  $("#carta-jogador").innerHTML = htmlCarta(meu, {interativa: estado.turnoDe==="jogador"});
+  $("#carta-cpu").innerHTML     = htmlVerso();
+  $("#vs-texto").textContent = "VS";
+  $("#btn-proxima").hidden = true;
+
+  if(estado.turnoDe === "jogador"){
+    $("#turno-aviso").textContent = "SEU TURNO — clique num atributo da sua carta 👆";
+    $("#carta-jogador").querySelectorAll(".attr.clicavel").forEach(el=>{
+      el.addEventListener("click", ()=>jogarAtributo(el.dataset.attr));
+    });
+  } else {
+    $("#turno-aviso").textContent = "🤖 O OPONENTE ESTÁ PENSANDO...";
+    setTimeout(()=>jogarAtributo(escolhaCPU(seu), true), 1200);
+  }
+}
+
+// Máximo de cada atributo (para comparar atributos de escalas diferentes)
+const MAX_ATTR = {};
+ATRIBUTOS.forEach(a=>{ MAX_ATTR[a.chave] = Math.max(1, ...POKEMONS.map(p=>p[a.chave])); });
+
+// Oponente escolhe o atributo em que sua carta é RELATIVAMENTE mais forte
+function escolhaCPU(carta){
+  let melhor = ATRIBUTOS[0].chave, best = -1;
+  ATRIBUTOS.forEach(a=>{
+    const ratio = carta[a.chave] / MAX_ATTR[a.chave];
+    if(ratio > best){ best = ratio; melhor = a.chave; }
+  });
+  return melhor;
+}
+
+function jogarAtributo(chave, porOponente){
+  if(estado.travado) return;
+  estado.travado = true;
+
+  const meu = estado.jogador[0];
+  const seu = estado.cpu[0];
+  const attr = ATRIBUTOS.find(a=>a.chave===chave);
+
+  Som.play("atributo");
+  $("#carta-cpu").innerHTML = htmlCarta(seu, {});
+  $("#turno-aviso").innerHTML = porOponente
+    ? `🤖 Oponente escolheu: ${attr.svg}<span>${attr.nome}</span>`
+    : `Atributo: ${attr.svg}<span>${attr.nome}</span>`;
+
+  const vMeu = meu[chave], vSeu = seu[chave];
+  let venc;
+  if(vMeu > vSeu) venc = "jogador";
+  else if(vSeu > vMeu) venc = "cpu";
+  else venc = "empate";
+
+  // dá tempo de ler o atributo escolhido antes de destacar o resultado
+  // (mais tempo quando foi o oponente que escolheu)
+  const atraso = porOponente ? 1200 : 550;
+  setTimeout(()=>{
+    $("#carta-jogador").innerHTML = htmlCarta(meu, {
+      resultado:{chave, venceu: venc==="jogador" ? true : (venc==="cpu"?false:null)}
+    });
+    $("#carta-cpu").innerHTML = htmlCarta(seu, {
+      resultado:{chave, venceu: venc==="cpu" ? true : (venc==="jogador"?false:null)}
+    });
+    resolverRodada(venc, meu, seu, attr, vMeu, vSeu);
+  }, atraso);
+}
+
+function resolverRodada(venc, meu, seu, attr, vMeu, vSeu){
+  // remove as cartas do topo dos dois baralhos
+  estado.jogador.shift();
+  estado.cpu.shift();
+
+  const jc = document.querySelector("#carta-jogador .carta");
+  const cc = document.querySelector("#carta-cpu .carta");
+  let msg, cls;
+
+  if(venc === "jogador"){
+    // carta do oponente é ELIMINADA (sai do jogo); a sua volta para o fundo
+    estado.jogador.push(meu);
+    estado.elimCpu.push(seu);
+    estado.eliminadas++;
+    estado.empatesSeguidos = 0;
+    msg = `✔ ${meu.nome} venceu ${seu.nome} em ${attr.nome} (${vMeu}×${vSeu}) — ${seu.nome} foi eliminado!`;
+    cls = "log-vitoria";
+    $("#vs-texto").textContent = "◀";
+    estado.turnoDe = "jogador";
+    if(jc) jc.classList.add("efeito-vitoria");
+    if(cc) cc.classList.add("efeito-derrota");
+    efeitoTela("vitoria");
+    Som.play("vencerRodada");
+  } else if(venc === "cpu"){
+    // sua carta é ELIMINADA; a do oponente volta para o fundo
+    estado.cpu.push(seu);
+    estado.elimJogador.push(meu);
+    estado.eliminadas++;
+    estado.empatesSeguidos = 0;
+    msg = `✘ ${seu.nome} venceu ${meu.nome} em ${attr.nome} (${vSeu}×${vMeu}) — ${meu.nome} foi eliminado!`;
+    cls = "log-derrota";
+    $("#vs-texto").textContent = "▶";
+    estado.turnoDe = "cpu";
+    if(jc) jc.classList.add("efeito-derrota");
+    if(cc) cc.classList.add("efeito-vitoria");
+    efeitoTela("derrota");
+    Som.play("perderRodada");
+  } else {
+    // empate: ninguém eliminado — as duas voltam para o fundo dos baralhos
+    estado.jogador.push(meu);
+    estado.cpu.push(seu);
+    estado.empatesSeguidos++;
+    msg = `= Empate em ${attr.nome} (${vMeu}) — ninguém eliminado (${estado.empatesSeguidos}/${MAX_EMPATES_SEGUIDOS})`;
+    cls = "log-empate";
+    $("#vs-texto").textContent = "=";
+    estado.turnoDe = estado.turnoDe === "jogador" ? "cpu" : "jogador";
+    efeitoTela("empate");
+    Som.play("empate");
+  }
+
+  addLog(msg, cls);
+  atualizarPlacar();
+
+  // Timer da próxima rodada: 2s quando foi o oponente que escolheu, 6s quando foi você
+  const segundos = estado.chooserDaRodada === "cpu" ? 2 : 6;
+  agendarProxima(segundos);
+}
+
+/* ---------- Efeitos visuais ---------- */
+function efeitoTela(tipo){
+  const cam = $("#efeito-camada");
+  if(!cam) return;
+  cam.className = "";
+  void cam.offsetWidth;   // força reflow para reiniciar a animação
+  const txt = tipo === "vitoria" ? "✔ VENCEU!"
+            : tipo === "derrota" ? "✘ PERDEU!" : "= EMPATE";
+  cam.innerHTML = `<span class="efeito-txt">${txt}</span>`;
+  cam.className = "mostra " + tipo;
+  clearTimeout(efeitoTela._t);
+  efeitoTela._t = setTimeout(()=>{ cam.className = ""; cam.innerHTML = ""; }, 950);
+}
+
+function confete(){
+  const c = $("#confete");
+  if(!c) return;
+  c.innerHTML = "";
+  const cores = ["#ffcb05","#2a75bb","#e3350d","#3bb54a","#23c6d6","#f48fb1"];
+  for(let i=0;i<70;i++){
+    const d = document.createElement("i");
+    d.style.left = (Math.random()*100) + "%";
+    d.style.background = cores[i % cores.length];
+    d.style.animationDelay = (Math.random()*0.7) + "s";
+    d.style.animationDuration = (1.6 + Math.random()*1.6) + "s";
+    c.appendChild(d);
+  }
+  setTimeout(()=>{ c.innerHTML = ""; }, 3800);
+}
+
+function addLog(texto, cls){
+  const p = document.createElement("div");
+  p.className = cls;
+  p.textContent = `R${estado.rodada}: ${texto}`;
+  $("#log").prepend(p);
+}
+
+/* ---------- Fim de batalha ---------- */
+function botaoFim(cont, texto, cls, fn){
+  const b = document.createElement("button");
+  b.className = "btn " + cls;
+  b.innerHTML = texto;
+  b.onclick = fn;
+  cont.appendChild(b);
+}
+
+function finalizar(empate){
+  limparTimers();
+  const ctx = estado.contexto || {tipo:"livre"};
+  const venceu = !empate && estado.cpu.length === 0;
+
+  // Vitória de campanha → tela de prêmio (celebração + escolher carta do adversário)
+  if(ctx.tipo === "campanha" && venceu) return abrirPremio(ctx);
+
+  mostrarTela("tela-fim");
+  const t = $("#fim-titulo"), s = $("#fim-sub"), acoes = $("#fim-acoes");
+  t.classList.remove("venceu","perdeu","empatou");
+  acoes.innerHTML = "";
+
+  // ---- EMPATE ----
+  if(empate){
+    Som.play("empate");
+    t.textContent = "🤝 EMPATE";
+    t.classList.add("empatou");
+    const motivo = estado.rodada >= MAX_RODADAS
+      ? `limite de ${MAX_RODADAS} rodadas atingido`
+      : `${MAX_EMPATES_SEGUIDOS} empates seguidos`;
+    s.innerHTML = `A batalha terminou empatada (${motivo}). Ninguém venceu.`;
+    if(ctx.tipo === "campanha"){
+      botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel));
+      botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
+    } else {
+      botaoFim(acoes, "↺ Jogar de novo", "btn-grande", escolherBatalhaLivre);
+      botaoFim(acoes, "Menu inicial", "btn-sec", irMenu);
+    }
+    return;
+  }
+
+  Som.play(venceu ? "vencerPartida" : "perderPartida");
+
+  if(ctx.tipo === "campanha"){       // aqui só cai em DERROTA
+    const info = NIVEIS[ctx.nivel-1];
+    progresso.derrotas = (progresso.derrotas||0) + 1;
+    salvarProgresso();
+    t.textContent = "☠ DERROTA";
+    t.classList.add("perdeu");
+    s.innerHTML = `<b>${info.nome}</b> foi forte demais...<br>Monte outro time, ganhe pontos e compre cartas melhores na loja!`;
+    botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel));
+    botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
+    botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
+  } else {
+    // ---- BATALHA LIVRE ----
+    if(venceu){
+      t.textContent = "🏆 VOCÊ VENCEU!"; t.classList.add("venceu");
+      let extra = "";
+      if(ctx.modo === "meu"){
+        const ouro = 30;
+        progresso.pontos += ouro;
+        extra = ` <span class="ganho">+${ouro} de ouro!</span>`;
+        const leg = rolarLendario(progresso.owned);   // sorte de lendário
+        if(leg){ progresso.owned.push(leg); extra += `<br>✨ Que sorte! Você encontrou <b>${cartaPorId(leg).nome}</b>!`; }
+        salvarProgresso();
+      }
+      s.innerHTML = `Você eliminou todas as cartas do oponente em ${estado.rodada} rodadas.${extra}`;
+    } else {
+      t.textContent = "☠ VOCÊ PERDEU"; t.classList.add("perdeu");
+      s.textContent = `O oponente eliminou suas cartas em ${estado.rodada} rodadas.`;
+    }
+    botaoFim(acoes, "↺ Jogar de novo", "btn-grande", escolherBatalhaLivre);
+    botaoFim(acoes, "Menu inicial", "btn-sec", irMenu);
+  }
+}
+
+/* ---------- Tela de prêmio (vitória de campanha) ---------- */
+function abrirPremio(ctx){
+  limparTimers();
+  const info = NIVEIS[ctx.nivel-1];
+  const primeiraVez = ctx.nivel === progresso.nivel;
+  const ganho = ouroBaseNivel(ctx.nivel) + (primeiraVez ? bonusPrimeiraVez() : 0);
+  progresso.pontos += ganho;
+  progresso.vitorias = (progresso.vitorias||0) + 1;
+  if(primeiraVez && progresso.nivel < MAX_NIVEL) progresso.nivel++;
+  const zerou = primeiraVez && ctx.nivel === MAX_NIVEL;
+  salvarProgresso();
+
+  mostrarTela("tela-premio");
+  confete();
+  Som.play("vencerPartida");
+  $("#premio-titulo").textContent = zerou ? "👑 CAMPEÃO!" : "🏆 VITÓRIA!";
+  $("#premio-sub").innerHTML =
+    `Você derrotou <b>${info.nome}</b>! <span class="ganho">+${ganho} pts</span>`+
+    `${primeiraVez ? ' <span class="bonus">(bônus 1ª vez)</span>' : ''} · Saldo: <b>${progresso.pontos}</b> pts`+
+    (zerou ? "<br>🎉 Você venceu toda a campanha!" : "");
+
+  const pool = [...new Set(estado.premioPool)];
+  const temNovas = pool.some(id=>!progresso.owned.includes(id));
+  const grid = $("#premio-grid");
+  grid.innerHTML = "";
+
+  if(temNovas){
+    $("#premio-instru").innerHTML = "🎁 Escolha uma carta do baralho derrotado para levar:";
+  } else {
+    $("#premio-instru").innerHTML = "Você já tem todas as cartas dele — <b>+40 pts</b> de bônus!";
+    progresso.pontos += 40; salvarProgresso();
+    $("#premio-sub").innerHTML = $("#premio-sub").innerHTML.replace(/Saldo: <b>\d+<\/b>/, `Saldo: <b>${progresso.pontos}</b>`);
+  }
+
+  pool.forEach(id=>{
+    const jaTem = progresso.owned.includes(id);
+    const el = document.createElement("div");
+    el.className = "premio-item" + (jaTem ? " jatem" : "");
+    el.dataset.id = id;
+    el.innerHTML = htmlCarta(cartaPorId(id), {}) +
+      (jaTem ? '<div class="premio-badge">já na coleção</div>' : '<div class="premio-badge nova">✋ escolher</div>');
+    if(!jaTem) el.onclick = ()=>escolherPremio(id);
+    grid.appendChild(el);
+  });
+
+  // botões de navegação só quando NÃO há carta a escolher (senão, escolher → revela → vai p/ campanha)
+  $("#premio-acoes").innerHTML = "";
+  if(!temNovas) mostrarBotoesPremio(ctx);
+}
+
+let _revealTimer = null;
+function escolherPremio(id){
+  if(progresso.owned.includes(id)) return;
+  progresso.owned.push(id);
+  salvarProgresso();
+  Som.play("premio");
+  const p = cartaPorId(id);
+  $("#premio-grid").querySelectorAll(".premio-item").forEach(el=>{
+    el.classList.add("bloqueado");
+    el.onclick = null;
+    if(+el.dataset.id === id) el.classList.add("escolhida");
+  });
+  confete();
+
+  // revelação: carta vem para frente, fica grande, espera 3s (ou clique em OK)
+  $("#reveal-carta").innerHTML = htmlCarta(p, {});
+  const rev = $("#premio-reveal");
+  rev.hidden = false;
+  clearTimeout(_revealTimer);
+  _revealTimer = setTimeout(fecharRevelacao, 3000);
+}
+function fecharRevelacao(){
+  clearTimeout(_revealTimer);
+  const rev = $("#premio-reveal");
+  if(rev) rev.hidden = true;
+  abrirCampanha();   // próxima tela
+}
+
+function mostrarBotoesPremio(ctx){
+  const acoes = $("#premio-acoes");
+  acoes.innerHTML = "";
+  if(ctx.nivel < MAX_NIVEL)
+    botaoFim(acoes, "Próximo desafio ▶", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel+1));
+  botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
+  botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
+}
+
+/* ===================================================================
+   CAMPANHA (mapa/escada)
+   =================================================================== */
+function abrirCampanha(){
+  mostrarTela("tela-campanha");
+  $("#camp-pontos").textContent = progresso.pontos;
+  const cont = $("#campanha-lista");
+  cont.innerHTML = "";
+  NIVEIS.forEach(info=>{
+    const estadoNivel = info.n < progresso.nivel ? "vencido"
+                      : info.n === progresso.nivel ? "atual" : "bloqueado";
+    const el = document.createElement("button");
+    el.className = "nivel-item " + estadoNivel;
+    el.disabled = estadoNivel === "bloqueado";
+    const tag = estadoNivel==="vencido" ? "✔ vencido"
+              : estadoNivel==="atual" ? "▶ Desafiar" : "🔒 bloqueado";
+    const bonus = info.n === progresso.nivel ? bonusPrimeiraVez() : 0;
+    const ouro = ouroBaseNivel(info.n) + bonus;
+    el.innerHTML =
+      `<span class="nivel-num">${info.n}</span>`+
+      `<span class="nivel-info"><b>${info.nome}</b>`+
+      `<small>${info.raridades.join(" · ")}</small>`+
+      `<small class="nivel-ouro">💰 ${ouro} de ouro${bonus?" (1ª vez)":""}</small></span>`+
+      `<span class="nivel-tag">${tag}</span>`;
+    if(estadoNivel !== "bloqueado") el.onclick = ()=>escolherTimeParaNivel(info.n);
+    cont.appendChild(el);
+  });
+}
+
+/* ===================================================================
+   LOJA
+   =================================================================== */
+let msgTimer;
+function flashLoja(txt, erro){
+  const el = $("#loja-msg");
+  el.textContent = txt;
+  el.className = "show" + (erro ? " erro" : "");
+  clearTimeout(msgTimer);
+  msgTimer = setTimeout(()=>el.className = "", 1900);
+}
+function abrirLoja(){
+  mostrarTela("tela-loja");
+  $("#loja-busca").value = "";
+  $("#loja-msg").className = "";
+  renderLoja("");
+}
+let _filtroLoja = "todos";
+function renderLoja(filtro){
+  $("#loja-pontos").textContent = progresso.pontos;
+  const f = (filtro||"").toLowerCase().trim();
+  const grid = $("#loja-grid");
+  const lista = POKEMONS
+    .filter(p=> !f || p.nome.toLowerCase().includes(f))
+    .filter(p=>{
+      if(_filtroLoja === "adquiridos") return progresso.owned.includes(p.id);
+      if(_filtroLoja === "faltam")     return !progresso.owned.includes(p.id);
+      return true;
+    })
+    .sort((a,b)=> (precoCarta(a)-precoCarta(b)) || a.id-b.id);
+  grid.innerHTML = "";
+  lista.forEach(p=>{
+    const dono  = progresso.owned.includes(p.id);
+    const lendario = ehLendario(p);
+    const wrap = document.createElement("div");
+
+    // Lendários/Míticos: mistério "?" — não vendidos (só em batalha)
+    if(lendario && !dono){
+      wrap.className = "loja-item misterio";
+      wrap.innerHTML = htmlCartaMisterio() + `<div class="loja-badge misterio">🔒 Só em batalha</div>`;
+      wrap.onclick = ()=>{ Som.play("erro"); flashLoja("🔒 Lendários e Míticos só vêm de batalhas (bosses ou sorte)!", true); };
+      grid.appendChild(wrap);
+      return;
+    }
+
+    const preco = precoCarta(p);
+    const podeComprar = !dono && progresso.pontos >= preco;
+    wrap.className = "loja-item " + (dono ? "tem" : (podeComprar ? "compravel" : "caro"));
+    wrap.innerHTML = htmlCarta(p, {}) + (dono
+      ? `<div class="loja-badge tem">✔ NA COLEÇÃO</div>`
+      : `<div class="loja-badge preco">💰 ${preco} pts</div>`);
+    if(!dono) wrap.onclick = ()=>comprarCarta(p.id);
+    grid.appendChild(wrap);
+  });
+  if(!lista.length)
+    grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;opacity:.7">Nenhum Pokémon encontrado.</p>`;
+}
+function comprarCarta(id){
+  if(progresso.owned.includes(id)) return;
+  const p = cartaPorId(id), preco = precoCarta(p);
+  if(progresso.pontos < preco){
+    Som.play("erro");
+    flashLoja(`Pontos insuficientes para ${p.nome} — faltam ${preco-progresso.pontos} pts`, true);
+    return;
+  }
+  progresso.pontos -= preco;
+  progresso.owned.push(id);
+  salvarProgresso();
+  Som.play("comprar");
+  renderLoja($("#loja-busca").value);
+  flashLoja(`✔ Você comprou ${p.nome}! (-${preco} pts)`);
+}
+
+/* ===================================================================
+   COLEÇÃO (só as cartas que o jogador possui)
+   =================================================================== */
+function abrirColecao(){
+  mostrarTela("tela-colecao");
+  $("#col-busca").value = "";
+  renderColecao("");
+}
+function renderColecao(filtro){
+  const f = (filtro||"").toLowerCase().trim();
+  const grid = $("#col-grid");
+  $("#col-contagem").textContent = progresso.owned.length;
+  const fav = progresso.timeFavorito || [];
+  $("#fav-contagem").textContent = fav.length;
+  const lista = cartasPossuidas()
+    .filter(p=> !f || p.nome.toLowerCase().includes(f))
+    .sort((a,b)=> a.id-b.id);
+  grid.innerHTML = "";
+  if(!lista.length){
+    grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;opacity:.8">Nenhuma carta ainda. Vença batalhas e compre na loja! 🛒</p>`;
+    return;
+  }
+  lista.forEach(p=>{
+    const naEquipe = fav.includes(p.id);
+    const el = document.createElement("div");
+    el.className = "col-item" + (naEquipe ? " favorito" : "");
+    el.dataset.id = p.id;
+    el.innerHTML = htmlCarta(p, {}) +
+      `<div class="fav-badge">${naEquipe ? "⭐ no time" : "☆ favoritar"}</div>`+
+      `<button class="btn-ver" title="Ver melhor">🔍</button>`;
+    el.querySelector(".btn-ver").onclick = (e)=>{ e.stopPropagation(); verCarta(p.id); };
+    el.onclick = ()=>toggleFavorito(p.id, el);
+    grid.appendChild(el);
+  });
+}
+// Gera uma descrição a partir dos atributos (sem texto de Pokédex)
+function descricaoCarta(p){
+  const nomes = {vida:"Vida",forca:"Força",ataque:"Ataque",defesa:"Defesa",agilidade:"Agilidade",inteligencia:"Inteligência"};
+  const ord = ATRIBUTOS.map(a=>({k:a.chave, v:p[a.chave]})).sort((a,b)=>b.v-a.v);
+  const fortes = ord.slice(0,2).map(x=>nomes[x.k]).join(" e ");
+  const fraco = nomes[ord[ord.length-1].k];
+  const tipos = [p.tipo1, p.tipo2].filter(Boolean).join(" / ");
+  const total = ATRIBUTOS.reduce((s,a)=>s+p[a.chave],0);
+  let porte = total > 500 ? "um Pokémon lendário e poderosíssimo" :
+              total > 420 ? "um Pokémon muito forte" :
+              total > 320 ? "um Pokémon equilibrado" : "um Pokémon iniciante";
+  return `<b>${p.nome}</b> é ${porte} do tipo <b>${tipos}</b> (${p.raridade}, Estágio ${p.estagio}).<br><br>`+
+         `Destaca-se em <b>${fortes}</b>, mas é mais fraco em <b>${fraco}</b>.<br>`+
+         `Poder total dos atributos: <b>${total}</b>.`;
+}
+function verCarta(id){
+  const p = cartaPorId(id);
+  $("#modal-carta-frente").innerHTML = htmlCarta(p, {});
+  $("#modal-carta-desc").innerHTML = descricaoCarta(p);
+  $("#modal-carta").hidden = false;
+  Som.play("select");
+}
+function toggleFavorito(id, el){
+  const fav = progresso.timeFavorito;
+  const idx = fav.indexOf(id);
+  if(idx >= 0){ fav.splice(idx,1); }
+  else {
+    if(fav.length >= 5){ Som.play("erro"); flashColecao("O time favorito já tem 5 cartas!"); return; }
+    fav.push(id);
+  }
+  salvarProgresso();
+  Som.play("select");
+  const naEquipe = fav.includes(id);
+  el.classList.toggle("favorito", naEquipe);
+  el.querySelector(".fav-badge").textContent = naEquipe ? "⭐ no time" : "☆ favoritar";
+  const carta = el.querySelector(".carta");
+  if(carta){ carta.classList.remove("girar"); void carta.offsetWidth; carta.classList.add("girar"); }
+  $("#fav-contagem").textContent = fav.length;
+}
+let _colMsgTimer;
+function flashColecao(txt){
+  const el = $("#col-msg");
+  if(!el) return;
+  el.textContent = txt; el.classList.add("show");
+  clearTimeout(_colMsgTimer);
+  _colMsgTimer = setTimeout(()=>el.classList.remove("show"), 1800);
+}
+
+/* ===================================================================
+   MENU
+   =================================================================== */
+function atualizarMenu(){
+  $("#chip-nivel").textContent  = progresso.nivel > MAX_NIVEL ? "MAX" : progresso.nivel;
+  $("#chip-pontos").textContent = progresso.pontos;
+  $("#chip-cartas").textContent = progresso.owned.length;
+  $("#menu-avatar").textContent = progresso.foto || "🧑";
+  $("#menu-nome").textContent   = progresso.nome || "Treinador";
+}
+function irMenu(){ mostrarTela("tela-menu"); atualizarMenu(); }
+
+function resetProgresso(){
+  if(!confirm("Reiniciar todo o progresso? Você volta às 3 cartas iniciais e 0 pontos.")) return;
+  progresso = progressoPadrao();
+  salvarProgresso();
+  atualizarMenu();
+  irMenu();
+}
+
+/* ===================================================================
+   CONFIGURAÇÕES (perfil / foto / som)
+   =================================================================== */
+const AVATARES = ["🧑","👦","👧","🧔","👩","🧙","🥷","👨‍🚀","🧑‍🎤","👸","🤠","🧑‍🔬","🦸","🦹","🧑‍🚀","👮","🧝","🧛"];
+function abrirConfig(){
+  mostrarTela("tela-config");
+  $("#config-nome").value = progresso.nome || "Treinador";
+  $("#config-avatar-preview").textContent = progresso.foto || "🧑";
+  const grid = $("#config-avatares");
+  grid.innerHTML = "";
+  AVATARES.forEach(a=>{
+    const el = document.createElement("button");
+    el.className = "avatar-op" + (a === progresso.foto ? " sel" : "");
+    el.textContent = a;
+    el.onclick = ()=>{
+      $("#config-avatares").querySelectorAll(".avatar-op").forEach(x=>x.classList.remove("sel"));
+      el.classList.add("sel");
+      $("#config-avatar-preview").textContent = a;
+      el.dataset.escolhido = "1";
+      _fotoEscolhida = a;
+      Som.play("select");
+    };
+    grid.appendChild(el);
+  });
+  _fotoEscolhida = progresso.foto || "🧑";
+  atualizarSomUI();
+}
+let _fotoEscolhida = "🧑";
+function salvarConfig(){
+  const nome = ($("#config-nome").value || "").trim() || "Treinador";
+  progresso.nome = nome.slice(0,16);
+  progresso.foto = _fotoEscolhida || "🧑";
+  salvarProgresso();
+  Som.play("comprar");
+  irMenu();
+}
+
+/* ---------- Regras ---------- */
+function abrirRegras(){ $("#modal-regras").hidden = false; }
+function fecharRegras(){ $("#modal-regras").hidden = true; }
+
+/* ---------- Som (mudo) ---------- */
+function atualizarSomUI(){
+  const on = !Som.estaMudo();
+  document.querySelectorAll(".js-som").forEach(b=>{
+    b.textContent = on ? "🔊" : "🔇";
+    b.title = on ? "Som ligado" : "Som desligado";
+  });
+}
+
+/* ---------- Ligações de UI ---------- */
+document.addEventListener("DOMContentLoaded", ()=>{
+  atualizarMenu();
+
+  // Som: desbloqueia áudio no 1º gesto, clique geral nos botões, e botões de mudo
+  document.addEventListener("pointerdown", ()=>Som.ensure(), {once:true});
+  document.addEventListener("click", e=>{ if(e.target.closest(".btn:not(.js-som)")) Som.play("click"); });
+  document.querySelectorAll(".js-som").forEach(b=>b.addEventListener("click", ()=>{
+    Som.toggleMudo();
+    atualizarSomUI();
+  }));
+  atualizarSomUI();
+  $("#btn-campanha").addEventListener("click", abrirCampanha);
+  $("#btn-loja").addEventListener("click", abrirLoja);
+  $("#btn-colecao").addEventListener("click", abrirColecao);
+  $("#btn-livre").addEventListener("click", escolherBatalhaLivre);
+  $("#btn-reset").addEventListener("click", resetProgresso);
+
+  // modal de batalha livre (2 modos)
+  $("#btn-livre-meu").addEventListener("click", ()=>batalhaLivre("meu"));
+  $("#btn-livre-qualquer").addEventListener("click", ()=>batalhaLivre("qualquer"));
+  $("#btn-livre-cancelar").addEventListener("click", ()=>{ $("#modal-livre").hidden = true; });
+  $("#modal-livre").addEventListener("click", e=>{ if(e.target.id === "modal-livre") $("#modal-livre").hidden = true; });
+
+  $("#btn-camp-voltar").addEventListener("click", irMenu);
+  $("#btn-loja-voltar").addEventListener("click", irMenu);
+  $("#btn-col-voltar").addEventListener("click", irMenu);
+
+  // configurações
+  $("#btn-config").addEventListener("click", abrirConfig);
+  $("#btn-config-voltar").addEventListener("click", irMenu);
+  $("#btn-config-salvar").addEventListener("click", salvarConfig);
+  $("#btn-config-reset").addEventListener("click", resetProgresso);
+
+  // filtro da loja
+  document.querySelectorAll(".filtro-btn").forEach(b=>b.addEventListener("click", ()=>{
+    document.querySelectorAll(".filtro-btn").forEach(x=>x.classList.remove("ativo"));
+    b.classList.add("ativo");
+    _filtroLoja = b.dataset.filtro;
+    renderLoja($("#loja-busca").value);
+  }));
+
+  // modal detalhe da carta
+  $("#btn-carta-fechar").addEventListener("click", ()=>{ $("#modal-carta").hidden = true; });
+  $("#modal-carta").addEventListener("click", e=>{ if(e.target.id === "modal-carta") $("#modal-carta").hidden = true; });
+
+  // seleção de time
+  $("#btn-sel-confirmar").addEventListener("click", confirmarSelecao);
+  $("#btn-sel-voltar").addEventListener("click", abrirCampanha);
+
+  // revelação do prêmio
+  $("#btn-reveal-ok").addEventListener("click", fecharRevelacao);
+
+  // regras
+  $("#btn-regras").addEventListener("click", abrirRegras);
+  $("#btn-regras-fechar").addEventListener("click", fecharRegras);
+  $("#modal-regras").addEventListener("click", e=>{ if(e.target.id === "modal-regras") fecharRegras(); });
+
+  $("#loja-busca").addEventListener("input", e=>renderLoja(e.target.value));
+  $("#col-busca").addEventListener("input", e=>renderColecao(e.target.value));
+
+  // Sair: encerra a batalha IMEDIATAMENTE (sem confirmação)
+  $("#btn-sair").addEventListener("click", ()=>{
+    limparTimers();
+    const ctx = estado.contexto || {};
+    ctx.tipo === "campanha" ? abrirCampanha() : irMenu();
+  });
+});

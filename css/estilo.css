@@ -1,0 +1,556 @@
+/* ===== Super Pokémon — Jogo de Cartas ===== */
+:root{
+  --azul:#2a75bb;      --azul-esc:#1a4e8a;
+  --amarelo:#ffcb05;   --amarelo-esc:#e0a800;
+  --vermelho:#e3350d;  --verde:#3bb54a;
+  --tinta:#1b1f2a;     --papel:#f4f6fb;
+  --sombra:0 6px 18px rgba(0,0,0,.35);
+  --radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Segoe UI",system-ui,Arial,sans-serif;
+  background:radial-gradient(circle at 50% -10%,#3a7bd5 0%,#141a2b 70%);
+  color:var(--papel);
+  min-height:100%;
+  display:flex; justify-content:center;
+  padding:16px;
+  -webkit-tap-highlight-color:transparent;
+}
+#app{width:100%;max-width:960px;position:relative}
+
+/* --- Telas --- */
+.tela{display:none;animation:fade .3s ease}
+.tela.ativa{display:flex;flex-direction:column;align-items:center;gap:18px}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* --- Botões --- */
+.btn{
+  font:inherit;font-weight:700;cursor:pointer;border:none;border-radius:12px;
+  padding:12px 22px;color:#fff;background:var(--azul);
+  box-shadow:var(--sombra);transition:transform .1s,filter .1s;
+}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn-grande{font-size:1.4rem;padding:16px 46px;background:var(--vermelho)}
+.btn-sec{background:var(--azul-esc)}
+.btn-prox{background:var(--verde);font-size:1.15rem;padding:14px 34px;margin-top:6px}
+
+/* ===== MENU ===== */
+#tela-menu{padding-top:6vh;text-align:center}
+.logo{display:flex;flex-direction:column;line-height:1;filter:drop-shadow(0 4px 0 rgba(0,0,0,.3))}
+.logo-super{font-size:2rem;font-weight:900;letter-spacing:6px;color:var(--amarelo);
+  -webkit-text-stroke:1.5px var(--azul-esc)}
+.logo-pokemon{font-size:3.6rem;font-weight:900;letter-spacing:2px;color:var(--amarelo);
+  -webkit-text-stroke:3px var(--azul-esc);text-shadow:0 5px 0 var(--azul-esc)}
+.logo-sub{font-size:.72rem;letter-spacing:2px;color:#cfe0ff;margin-top:8px}
+.menu-desc{max-width:520px;line-height:1.5;color:#dfe8ff}
+.menu-botoes{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.menu-config{margin-top:6px;color:#cfe0ff;font-size:.95rem}
+.menu-config select{font:inherit;padding:6px 10px;border-radius:8px;border:none;margin-left:6px}
+
+/* ===== PLACAR ===== */
+#tela-jogo{width:100%}
+#placar{
+  width:100%;display:flex;justify-content:space-between;align-items:center;
+  background:rgba(0,0,0,.28);border-radius:var(--radius);padding:10px 18px;
+}
+.placar-lado{display:flex;flex-direction:column;align-items:center;min-width:80px}
+.placar-nome{font-size:.8rem;letter-spacing:1px;opacity:.85}
+.placar-cartas{font-size:2rem;font-weight:900}
+.placar-lado.meu .placar-cartas{color:var(--amarelo)}
+.placar-lado.cpu .placar-cartas{color:#ff9d8a}
+.placar-centro{text-align:center;font-weight:700}
+.mesa-info{display:block;font-size:.78rem;color:var(--amarelo);min-height:1em;font-weight:600}
+
+/* ===== ARENA (mão + mesa) ===== */
+#arena{width:100%;display:flex;align-items:flex-start;justify-content:center;gap:12px}
+
+/* ===== MÃO / BARALHO (coluna esquerda) ===== */
+#mao{flex:0 0 auto;width:108px;background:rgba(0,0,0,.24);border-radius:14px;
+  padding:8px 6px;display:flex;flex-direction:column;gap:6px;
+  max-height:470px;overflow-y:auto}
+.mao-titulo{font-size:.66rem;text-align:center;opacity:.75;letter-spacing:.5px;
+  font-weight:800;margin-bottom:2px}
+#mao-lista{display:flex;flex-direction:column;gap:8px}
+.mini-carta{position:relative;border-radius:10px;padding:5px 4px 4px;
+  display:flex;flex-direction:column;align-items:center;
+  background:linear-gradient(150deg,var(--c1,#666),var(--c2,#333));
+  border:2px solid rgba(255,255,255,.3)}
+.mini-carta img{width:54px;height:50px;object-fit:contain;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
+.mini-nome{font-size:.6rem;font-weight:700;color:#fff;text-align:center;line-height:1.05;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
+  text-shadow:0 1px 2px rgba(0,0,0,.6);margin-top:1px}
+.mini-rot{position:absolute;top:-7px;left:50%;transform:translateX(-50%);
+  font-size:.5rem;font-weight:800;padding:1px 6px;border-radius:6px;white-space:nowrap;
+  box-shadow:0 2px 4px rgba(0,0,0,.4)}
+.mini-rot.atual{background:var(--amarelo);color:var(--tinta)}
+.mini-rot.prox{background:#fff;color:var(--tinta)}
+.mini-rot.morto{background:var(--vermelho);color:#fff}
+.mini-carta.atual{border-color:var(--amarelo);box-shadow:0 0 9px rgba(255,203,5,.55)}
+.mini-carta.proxima{border-color:rgba(255,255,255,.85);border-style:dashed}
+
+/* mão do oponente (coluna direita, espelho da do jogador) */
+#mao-oponente{flex:0 0 auto;width:108px;background:rgba(0,0,0,.24);border-radius:14px;
+  padding:8px 6px;display:flex;flex-direction:column;gap:6px;max-height:470px;overflow-y:auto}
+#mao-op-lista{display:flex;flex-direction:column;gap:8px}
+
+/* mini-carta virada para baixo (verso Pokébola) */
+.mini-carta.mini-verso{height:74px;background:repeating-linear-gradient(45deg,#c0392b 0 8px,#a5281c 8px 16px);
+  border-color:rgba(255,255,255,.4);align-items:center;justify-content:center;padding:0}
+.mini-carta.mini-verso::after{content:"";width:30px;height:30px;border-radius:50%;
+  background:linear-gradient(#fff 0 50%,#e3350d 50% 100%);border:3px solid #1b1f2a;
+  box-shadow:0 0 0 3px rgba(255,255,255,.15)}
+.mini-carta.mini-verso::before{content:"";position:absolute;width:9px;height:9px;border-radius:50%;
+  background:#fff;border:3px solid #1b1f2a;z-index:2}
+
+/* mini-carta derrotada: cinza + corte vermelho (KO) */
+.mini-carta.eliminada{filter:grayscale(1) brightness(.55);opacity:.85;overflow:hidden}
+.mini-carta.eliminada::after{content:"";position:absolute;top:50%;left:-10%;width:120%;height:5px;
+  background:var(--vermelho);transform:rotate(-24deg);box-shadow:0 0 6px rgba(227,53,13,.9);
+  filter:none;z-index:3}
+.mini-carta.eliminada .mini-rot.morto{filter:none}
+
+/* ===== MESA ===== */
+#mesa{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:14px;
+  flex-wrap:nowrap;max-width:720px;
+}
+.slot-carta{flex:1;display:flex;justify-content:center;max-width:340px}
+#vs{flex:0 0 auto}
+#vs-texto{font-size:1.6rem;font-weight:900;color:var(--amarelo);
+  text-shadow:0 2px 0 var(--azul-esc)}
+
+/* ===== CARTA ===== */
+.carta{
+  width:300px;max-width:100%;border-radius:18px;overflow:hidden;
+  background:linear-gradient(160deg,var(--c1,#666),var(--c2,#333));
+  box-shadow:var(--sombra);border:3px solid rgba(255,255,255,.5);
+  color:#fff;position:relative;user-select:none;
+}
+.carta-topo{display:flex;justify-content:space-between;align-items:center;padding:8px 12px 4px}
+.carta-num{font-weight:900;font-size:.9rem;opacity:.9}
+.carta-tipos{display:flex;gap:4px}
+.tag-tipo{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:20px;
+  background:rgba(0,0,0,.35);letter-spacing:.5px}
+.carta-img{
+  height:150px;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.35),transparent 70%);
+  margin:2px 12px 0;border-radius:12px;
+}
+.carta-img img{max-height:142px;max-width:100%;
+  image-rendering:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+.carta-nome{text-align:center;font-size:1.25rem;font-weight:900;padding:3px 8px 1px;
+  text-shadow:0 2px 3px rgba(0,0,0,.5)}
+.carta-rar{text-align:center;font-size:.66rem;letter-spacing:2px;opacity:.85;margin-bottom:3px}
+.carta-attrs{padding:4px 12px 12px;display:grid;
+  grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,auto);
+  grid-auto-flow:column;gap:5px 8px}
+.attr{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(255,255,255,.14);border-radius:8px;padding:4px 8px;
+  font-weight:700;transition:background .15s,transform .15s;min-width:0;
+  border:2px solid transparent;
+}
+/* contorno colorido por atributo (mesma cor do ícone) */
+.attr.attr-vida{border-color:#e01f26}
+.attr.attr-forca{border-color:#ef4a1e}
+.attr.attr-ataque{border-color:#f15a22}
+.attr.attr-defesa{border-color:#f5a623}
+.attr.attr-agilidade{border-color:#67c327}
+.attr.attr-inteligencia{border-color:#23c6d6}
+.attr .attr-nome{display:flex;align-items:center;gap:5px;font-size:.66rem;
+  letter-spacing:.2px;min-width:0;overflow:hidden}
+.attr .attr-nome>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attr .attr-val{font-size:1.05rem;font-weight:900;font-variant-numeric:tabular-nums;padding-left:4px}
+.ic{width:18px;height:18px;flex:none;display:block}
+.attr.clicavel{cursor:pointer}
+.attr.clicavel:hover{background:rgba(255,255,255,.32);transform:translateX(2px)}
+.attr.escolhido{background:var(--amarelo);color:var(--tinta)}
+.attr.venceu{background:var(--verde);color:#fff;box-shadow:0 0 0 2px #fff inset}
+.attr.perdeu{background:var(--vermelho);color:#fff}
+
+/* Verso da carta */
+.carta-verso{
+  width:300px;max-width:100%;height:353px;border-radius:18px;
+  background:
+    repeating-linear-gradient(45deg,#c0392b 0 14px,#a5281c 14px 28px);
+  border:3px solid rgba(255,255,255,.5);box-shadow:var(--sombra);
+  display:flex;align-items:center;justify-content:center;
+}
+.carta-verso::after{
+  content:"";width:96px;height:96px;border-radius:50%;
+  background:
+    linear-gradient(#fff 0 50%,#e3350d 50% 100%);
+  border:6px solid #1b1f2a;
+  box-shadow:0 0 0 8px rgba(255,255,255,.15);
+  position:relative;
+}
+.carta-verso::before{
+  content:"";position:absolute;width:26px;height:26px;border-radius:50%;
+  background:#fff;border:6px solid #1b1f2a;z-index:2;
+}
+
+/* ===== AÇÕES ===== */
+#turno-aviso{min-height:24px;font-weight:800;letter-spacing:1px;
+  display:flex;align-items:center;justify-content:center;gap:7px}
+#turno-aviso .ic{width:22px;height:22px}
+#acoes{width:100%;max-width:520px;text-align:center}
+#instrucao{margin-bottom:8px;opacity:.9}
+#botoes-atributos{display:grid;grid-template-columns:repeat(2,1fr);
+  grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:8px}
+.btn-attr{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--azul-esc);padding:9px 14px;
+}
+.btn-attr .ba-nome{display:flex;align-items:center;gap:7px}
+.btn-attr .ic{width:18px;height:18px}
+.btn-attr .ba-val{font-weight:900;color:var(--amarelo)}
+.btn-attr:disabled{opacity:.35}
+
+/* ===== LOG ===== */
+#log-box{width:100%;max-width:640px;background:rgba(0,0,0,.24);border-radius:12px;
+  padding:8px 12px 10px}
+.log-titulo{font-size:.78rem;font-weight:800;letter-spacing:.5px;color:#dfe8ff;
+  opacity:.85;margin-bottom:5px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:4px}
+#log{width:100%;max-height:104px;overflow-y:auto;
+  font-size:.82rem;color:#cfe0ff;display:flex;flex-direction:column-reverse;gap:2px}
+#log:empty::after{content:"Nenhuma jogada ainda...";opacity:.5;font-style:italic}
+.log-vitoria{color:var(--verde)}
+.log-derrota{color:#ff9d8a}
+.log-empate{color:var(--amarelo)}
+
+/* contagem regressiva no botão Próxima */
+.btn-prox .cd{display:inline-block;min-width:2.4em;text-align:left;
+  background:rgba(0,0,0,.28);border-radius:8px;padding:0 6px;margin-left:4px;font-variant-numeric:tabular-nums}
+
+.btn-sair{align-self:center;background:transparent;box-shadow:none;
+  padding:6px 14px;font-size:.9rem;opacity:.6;margin-top:2px}
+.btn-sair:hover{opacity:1}
+
+/* ===== FIM ===== */
+#tela-fim{padding-top:10vh;text-align:center;gap:14px}
+#fim-titulo{font-size:3rem;font-weight:900}
+#fim-titulo.venceu{color:var(--verde)}
+#fim-titulo.perdeu{color:var(--vermelho)}
+#fim-sub{font-size:1.1rem;color:#dfe8ff;max-width:520px;line-height:1.5}
+#fim-sub .ganho{color:var(--amarelo);font-weight:900}
+#fim-sub .bonus{color:var(--verde);font-weight:700}
+
+/* ===== MENU: chips e botões extras ===== */
+.menu-chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.chip{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.15);
+  border-radius:999px;padding:6px 14px;font-size:.9rem;color:#dfe8ff}
+.chip b{color:var(--amarelo)}
+.btn-reset{background:transparent;box-shadow:none;opacity:.55;font-size:.82rem;
+  padding:6px 14px;font-weight:600}
+.btn-reset:hover{opacity:1}
+
+/* ===== Cabeçalho compartilhado (coleção / loja / campanha) ===== */
+/* cabeçalho FIXO em todos os menus (não desce ao rolar) */
+.sub-header{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+  background:linear-gradient(180deg,#1a2740 0%,#182238 100%);padding:12px 16px;border-radius:var(--radius);
+  position:sticky;top:0;z-index:25;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.sub-header h2{flex:1;font-size:1.2rem;white-space:nowrap}
+.sub-header input{flex:1;min-width:140px;font:inherit;padding:8px 12px;border-radius:8px;border:none}
+.sub-desc{width:100%;color:#cfe0ff;font-size:.92rem;text-align:center;margin-top:-4px}
+
+/* variante de duas linhas (seleção de time / coleção) */
+.sub-header.fixo{flex-direction:column;align-items:stretch}
+
+/* ===== PLACAR: botões nos cantos ===== */
+.placar-canto{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.placar-canto.dir{justify-content:flex-end}
+.btn-mini{background:var(--azul-esc);box-shadow:none;padding:5px 10px;font-size:.74rem;font-weight:700;white-space:nowrap}
+.btn-mini.sair{background:var(--vermelho)}
+.btn-mini.js-som{padding:6px 10px}
+
+/* ===== CARTA-MISTÉRIO (lendários na loja) ===== */
+.carta.carta-misterio{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#3a3f52,#1c1f2b);min-height:300px;gap:10px}
+.misterio-interro{font-size:6rem;font-weight:900;color:var(--amarelo);
+  text-shadow:0 4px 0 rgba(0,0,0,.4);line-height:1}
+.misterio-txt{font-size:.8rem;font-weight:800;letter-spacing:2px;color:#9fb0d0;text-align:center}
+.loja-item.misterio{cursor:pointer}
+.loja-badge.misterio{background:#5a4b8a;color:#fff;font-size:.72rem}
+
+/* ===== TIME FAVORITO (coleção) ===== */
+.col-item{position:relative;cursor:pointer;transition:transform .12s}
+.col-item:hover{transform:translateY(-3px)}
+.col-item .carta{width:100%;transition:filter .15s}
+.col-item.favorito .carta{outline:4px solid var(--amarelo);border-radius:18px;
+  box-shadow:0 0 16px rgba(255,203,5,.55)}
+/* check movido para baixo (não sobrepõe mais os status do topo) */
+.fav-badge{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  padding:4px 12px;border-radius:999px;font-weight:800;font-size:.72rem;
+  background:rgba(0,0,0,.72);color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.5);pointer-events:none;white-space:nowrap;z-index:2}
+.col-item.favorito .fav-badge{background:var(--amarelo);color:var(--tinta)}
+/* botão "ver melhor" no canto superior direito */
+.btn-ver{position:absolute;top:8px;right:8px;z-index:3;width:34px;height:34px;
+  border:none;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:1rem;
+  cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4);transition:transform .1s,background .1s}
+.btn-ver:hover{background:var(--azul);transform:scale(1.12)}
+#col-msg{width:100%;text-align:center;color:#fff;font-weight:700;max-height:0;overflow:hidden;
+  transition:all .2s;opacity:0}
+#col-msg.show{max-height:50px;padding:8px;opacity:1;background:rgba(227,53,13,.9);border-radius:10px;margin-top:8px}
+
+/* ===== EMPATE ===== */
+#fim-titulo.empatou{color:var(--amarelo)}
+
+/* ===== AVATARES / PERFIL ===== */
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.4);flex:none}
+.avatar-oponente{border-color:#ff9d8a}
+.avatar-jogador{border-color:var(--amarelo)}
+.botoes-mini{display:flex;flex-direction:column;gap:4px}
+.perfil-menu{display:flex;flex-direction:column;align-items:center;gap:6px}
+.avatar-grande{width:76px;height:76px;font-size:2.6rem;border-color:var(--amarelo)}
+.perfil-nome{font-size:1.2rem;font-weight:800;color:var(--amarelo)}
+
+/* ===== CONFIGURAÇÕES ===== */
+.config-box{width:100%;max-width:520px;display:flex;flex-direction:column;gap:16px;
+  background:rgba(0,0,0,.22);padding:20px;border-radius:var(--radius);margin-top:16px}
+.config-avatar-preview{width:90px;height:90px;border-radius:50%;align-self:center;
+  display:flex;align-items:center;justify-content:center;font-size:3rem;
+  background:rgba(255,255,255,.12);border:3px solid var(--amarelo)}
+.config-campo{display:flex;flex-direction:column;gap:6px;color:#dfe8ff;font-weight:700}
+.config-campo.linha{flex-direction:row;align-items:center;justify-content:space-between}
+.config-campo input{font:inherit;padding:10px 12px;border-radius:8px;border:none;font-weight:600}
+.avatar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px}
+.avatar-op{font-size:1.8rem;background:rgba(255,255,255,.1);border:2px solid transparent;
+  border-radius:12px;cursor:pointer;padding:6px;transition:transform .1s}
+.avatar-op:hover{transform:scale(1.1)}
+.avatar-op.sel{border-color:var(--amarelo);background:rgba(255,203,5,.2)}
+
+/* ===== FILTRO DA LOJA ===== */
+.filtro-loja{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.filtro-btn{background:var(--azul-esc);box-shadow:none;padding:7px 16px;font-size:.85rem;opacity:.7}
+.filtro-btn.ativo{background:var(--amarelo);color:var(--tinta);opacity:1}
+
+/* ouro na campanha/seleção */
+.nivel-ouro{color:var(--amarelo);font-weight:700;font-size:.72rem}
+.ouro-txt{color:var(--amarelo)}
+#sel-recompensa{font-size:1rem;color:#fff}
+
+/* ===== MODAL DETALHE DA CARTA ===== */
+.modal-carta-box{max-width:640px}
+.modal-carta-conteudo{display:flex;gap:20px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+.modal-carta-conteudo .carta{width:280px;flex:none}
+.carta-desc{flex:1;min-width:220px;color:#e6edff;line-height:1.55;font-size:1rem;text-align:left}
+.carta-desc b{color:var(--amarelo)}
+
+/* ===== MODAL BATALHA LIVRE ===== */
+.livre-opcoes{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.livre-op{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;
+  background:var(--vermelho);padding:14px 18px}
+.livre-op.sec{background:var(--azul-esc)}
+.op-titulo{font-size:1.1rem;font-weight:900}
+.op-desc{font-size:.82rem;font-weight:600;opacity:.92;white-space:normal}
+.sub-header-linha{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sub-header.fixo h2{flex:1}
+.stats-linha{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.stats-linha .chip{font-size:.82rem;padding:4px 11px}
+
+/* giro só da carta clicada (frente↔verso) */
+.carta.girar{animation:girarCarta .55s ease}
+@keyframes girarCarta{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
+
+/* ===== REVELAÇÃO DA CARTA-PRÊMIO ===== */
+#premio-reveal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.82);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+#premio-reveal[hidden]{display:none}
+.reveal-box{display:flex;flex-direction:column;align-items:center;gap:16px;
+  animation:revelaBox .5s ease}
+@keyframes revelaBox{0%{transform:scale(.3) rotateY(180deg);opacity:0}
+  70%{transform:scale(1.08) rotateY(0)}100%{transform:scale(1);opacity:1}}
+.reveal-titulo{font-size:1.6rem;font-weight:900;color:var(--amarelo);
+  text-shadow:0 3px 0 var(--azul-esc)}
+#reveal-carta .carta{width:320px;box-shadow:0 0 40px rgba(255,203,5,.75)}
+#btn-reveal-ok{font-size:1.15rem;padding:12px 40px}
+
+/* ===== CAMPANHA (escada de oponentes) ===== */
+#tela-campanha,#tela-loja,#tela-colecao{width:100%}
+#campanha-lista{width:100%;display:flex;flex-direction:column;gap:10px;padding-top:8px}
+.nivel-item{display:flex;align-items:center;gap:14px;text-align:left;
+  padding:14px 18px;border-radius:14px;border:none;font:inherit;color:#fff;
+  background:var(--azul-esc);box-shadow:var(--sombra);cursor:pointer;
+  transition:transform .1s,filter .1s}
+.nivel-item:hover:not(:disabled){filter:brightness(1.12);transform:translateX(3px)}
+.nivel-item:disabled{cursor:not-allowed}
+.nivel-num{font-size:1.5rem;font-weight:900;width:40px;text-align:center;
+  color:var(--amarelo);flex:none}
+.nivel-info{flex:1;display:flex;flex-direction:column;line-height:1.25}
+.nivel-info b{font-size:1.05rem}
+.nivel-info small{opacity:.75;font-size:.75rem;letter-spacing:.5px}
+.nivel-tag{font-weight:800;font-size:.85rem;white-space:nowrap}
+.nivel-item.vencido{background:#1f5e3a}
+.nivel-item.vencido .nivel-tag{color:#7ff0a8}
+.nivel-item.atual{background:var(--vermelho);animation:pulseNivel 1.6s ease-in-out infinite}
+.nivel-item.bloqueado{background:#2a3145;opacity:.55}
+@keyframes pulseNivel{50%{box-shadow:0 0 0 4px rgba(227,53,13,.35),var(--sombra)}}
+
+/* ===== LOJA ===== */
+#loja-msg{width:100%;text-align:center;min-height:0;max-height:0;overflow:hidden;
+  color:#fff;font-weight:700;border-radius:10px;transition:all .2s;opacity:0}
+#loja-msg.show{min-height:auto;max-height:60px;padding:10px;opacity:1;
+  background:rgba(59,181,74,.9)}
+#loja-msg.show.erro{background:rgba(227,53,13,.92)}
+
+/* Grade de cartas (coleção e loja) */
+#col-grid,#loja-grid{width:100%;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;padding-top:16px}
+#col-grid .carta,#loja-grid .carta{width:100%}
+#col-grid .carta-img,#loja-grid .carta-img{height:130px}
+#col-grid .carta-img img,#loja-grid .carta-img img{max-height:122px}
+
+.loja-item{position:relative}
+.loja-item.compravel,.loja-item.caro{cursor:pointer}
+.loja-item.compravel .carta,.loja-item.caro .carta{filter:grayscale(.95) brightness(.62)}
+.loja-item.compravel:hover .carta{filter:grayscale(.2) brightness(.95);
+  outline:3px solid var(--amarelo);border-radius:18px}
+.loja-item.caro:hover .carta{filter:grayscale(.7) brightness(.75)}
+.loja-badge{position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  padding:5px 14px;border-radius:999px;font-weight:800;font-size:.9rem;
+  box-shadow:0 3px 8px rgba(0,0,0,.4);white-space:nowrap;pointer-events:none}
+.loja-badge.preco{background:var(--amarelo);color:var(--tinta)}
+.loja-item.caro .loja-badge.preco{background:#8892a5;color:#fff}
+.loja-badge.tem{background:var(--verde);color:#fff;top:auto;bottom:12px;font-size:.72rem}
+
+/* ===== SELEÇÃO DE TIME ===== */
+#tela-selecao{width:100%}
+#sel-grid{width:100%;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding-top:14px}
+.sel-item{position:relative;cursor:pointer;transition:transform .1s}
+.sel-item .carta{width:100%}
+.sel-item .carta-img{height:120px}
+.sel-item .carta-img img{max-height:112px}
+.sel-item:hover{transform:translateY(-3px)}
+.sel-item .carta{filter:brightness(.82)}
+.sel-item.sel .carta{filter:none;outline:4px solid var(--verde);border-radius:18px}
+.sel-check{position:absolute;top:10px;right:14px;width:34px;height:34px;border-radius:50%;
+  background:var(--verde);color:#fff;font-weight:900;display:flex;align-items:center;
+  justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.4)}
+#btn-sel-confirmar{font-size:1rem;padding:12px 28px}
+
+/* ===== TELA PRÊMIO ===== */
+#tela-premio{padding-top:4vh;text-align:center;gap:12px;position:relative}
+#premio-titulo{font-size:2.8rem;font-weight:900;color:var(--amarelo);
+  text-shadow:0 4px 0 var(--azul-esc);animation:premioIn .6s ease}
+@keyframes premioIn{0%{transform:scale(.4) rotate(-8deg);opacity:0}
+  60%{transform:scale(1.15) rotate(3deg)}100%{transform:none;opacity:1}}
+#premio-sub{font-size:1.05rem;color:#dfe8ff}
+#premio-sub .ganho{color:var(--amarelo);font-weight:900}
+#premio-sub .bonus{color:var(--verde);font-weight:700}
+#premio-instru{font-weight:800;font-size:1.1rem;color:#fff}
+#premio-grid{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;width:100%}
+.premio-item{position:relative;cursor:pointer;transition:transform .12s}
+.premio-item:hover:not(.bloqueado):not(.jatem){transform:translateY(-6px) scale(1.03)}
+.premio-item:hover:not(.bloqueado):not(.jatem) .carta{outline:4px solid var(--amarelo);border-radius:18px}
+.premio-item.jatem{cursor:not-allowed}
+.premio-item.jatem .carta{filter:grayscale(.85) brightness(.6)}
+.premio-item.bloqueado{cursor:default;pointer-events:none}
+.premio-item.bloqueado:not(.escolhida) .carta{filter:grayscale(.7) brightness(.55);opacity:.6}
+.premio-item.escolhida .carta{outline:4px solid var(--verde);border-radius:18px;
+  box-shadow:0 0 22px rgba(59,181,74,.7);animation:pulse .5s ease}
+.premio-badge{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  padding:4px 12px;border-radius:999px;font-weight:800;font-size:.72rem;
+  background:#8892a5;color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.4);white-space:nowrap;pointer-events:none}
+.premio-badge.nova{background:var(--amarelo);color:var(--tinta);font-size:.8rem}
+
+/* confete */
+#confete{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5}
+#confete i{position:absolute;top:-14px;width:9px;height:15px;border-radius:2px;
+  animation:cair linear forwards}
+@keyframes cair{to{transform:translateY(105vh) rotate(720deg);opacity:.9}}
+
+/* ===== EFEITOS DE RODADA ===== */
+#tela-jogo{position:relative}
+#efeito-camada{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;z-index:20;opacity:0}
+#efeito-camada.mostra{animation:efeitoFlash .95s ease-out}
+#efeito-camada.vitoria{background:radial-gradient(circle,rgba(59,181,74,.35),transparent 65%)}
+#efeito-camada.derrota{background:radial-gradient(circle,rgba(227,53,13,.35),transparent 65%)}
+#efeito-camada.empate{background:radial-gradient(circle,rgba(255,203,5,.28),transparent 65%)}
+.efeito-txt{font-size:3.4rem;font-weight:900;color:#fff;-webkit-text-stroke:2px rgba(0,0,0,.4);
+  text-shadow:0 6px 14px rgba(0,0,0,.5)}
+#efeito-camada.vitoria .efeito-txt{color:#8ff0a8}
+#efeito-camada.derrota .efeito-txt{color:#ff9d8a}
+#efeito-camada.empate .efeito-txt{color:var(--amarelo)}
+@keyframes efeitoFlash{0%{opacity:0}15%{opacity:1;transform:scale(1.1)}
+  70%{opacity:1;transform:scale(1)}100%{opacity:0}}
+.carta.efeito-vitoria{animation:cartaVit .7s ease;box-shadow:0 0 26px rgba(59,181,74,.85)!important}
+.carta.efeito-derrota{animation:cartaDer .6s ease;filter:grayscale(.5) brightness(.8)}
+@keyframes cartaVit{0%,100%{transform:none}30%{transform:scale(1.06) translateY(-4px)}}
+@keyframes cartaDer{0%,100%{transform:none}20%{transform:translateX(-7px) rotate(-2deg)}
+  40%{transform:translateX(7px) rotate(2deg)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+/* ===== RODAPÉ DA BATALHA + REGRAS ===== */
+.jogo-rodape{display:flex;gap:16px;align-items:center;justify-content:center}
+.btn-regras{background:var(--azul-esc);box-shadow:none;padding:6px 16px;font-size:.9rem}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;
+  display:flex;align-items:center;justify-content:center;padding:18px}
+.modal[hidden]{display:none}
+.modal-box{background:linear-gradient(160deg,#243049,#141a2b);border:2px solid rgba(255,255,255,.18);
+  border-radius:18px;padding:22px 24px;max-width:520px;width:100%;box-shadow:var(--sombra);
+  max-height:88vh;overflow-y:auto}
+.modal-box h2{color:var(--amarelo);margin-bottom:12px;font-size:1.4rem}
+.regras-lista{list-style:none;display:flex;flex-direction:column;gap:9px;margin-bottom:16px}
+.regras-lista li{font-size:.92rem;line-height:1.45;color:#e6edff;
+  padding-left:18px;position:relative}
+.regras-lista li::before{content:"▸";position:absolute;left:0;color:var(--amarelo)}
+.regras-lista b{color:#fff}
+.modal-box .btn-grande{width:100%;font-size:1.1rem}
+
+/* ===== animações de reveal ===== */
+.flip-in{animation:flipin .45s ease}
+@keyframes flipin{from{transform:rotateY(90deg);opacity:0}to{transform:none;opacity:1}}
+.pulse{animation:pulse .4s ease}
+@keyframes pulse{50%{transform:scale(1.05)}}
+
+/* ===== responsivo ===== */
+/* Tablets: dois cards ainda cabem lado a lado em 2 colunas */
+@media(max-width:640px){
+  .carta,.carta-verso{width:280px}
+  .carta-verso{height:330px}
+  .carta-img{height:120px}
+  .carta-img img{max-height:112px}
+  .logo-pokemon{font-size:2.6rem}
+  #mesa{gap:6px}
+  .btn-grande{padding:14px 30px;font-size:1.2rem}
+  .attr .attr-nome{font-size:.6rem;gap:4px}
+  .attr .attr-val{font-size:.95rem}
+  .attr{padding:4px 6px}
+  .carta-attrs{gap:4px 6px;padding:4px 10px 12px}
+  .ic{width:16px;height:16px}
+}
+/* Celular estreito: encolhe os cards e volta atributos p/ 1 coluna (cabe melhor) */
+@media(max-width:560px){
+  .slot-carta{min-width:0}
+  .carta,.carta-verso{width:100%;max-width:172px}
+  .carta-verso{height:340px}
+  .carta-img{height:88px}
+  .carta-img img{max-height:82px}
+  .carta-nome{font-size:1rem}
+  .carta-num{font-size:.72rem}
+  .tag-tipo{font-size:.5rem;padding:1px 5px}
+  .carta-attrs{grid-template-columns:1fr;grid-template-rows:auto;
+    grid-auto-flow:row;gap:3px;padding:3px 8px 10px}
+  .attr .attr-nome{font-size:.64rem}
+  .attr .attr-val{font-size:1rem}
+  .ic{width:15px;height:15px}
+  #mesa{gap:4px}
+  #vs-texto{font-size:1.1rem}
+  /* mãos viram faixas horizontais (jogador acima, oponente abaixo da mesa) */
+  #arena{flex-direction:column;align-items:stretch}
+  #mao,#mao-oponente{width:100%;max-height:none;flex-direction:row;gap:6px;
+    overflow-x:auto;overflow-y:hidden;padding:6px}
+  #mao-oponente{order:3}
+  .mao-titulo{display:none}
+  #mao-lista,#mao-op-lista{flex-direction:row;gap:8px}
+  .mini-carta{flex:0 0 auto;width:64px}
+  .mini-carta img{width:46px;height:42px}
+  .mini-carta.mini-verso{height:60px;width:52px}
+}
