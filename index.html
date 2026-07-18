@@ -37,6 +37,7 @@
 
     <div class="menu-botoes">
       <button class="btn btn-grande" id="btn-campanha">⚔️ CAMPANHA</button>
+      <button class="btn btn-grande btn-vida" id="btn-campanha-vida">❤️ CAMPANHA VIDA</button>
     </div>
     <div class="menu-botoes">
       <button class="btn btn-sec" id="btn-loja">🛒 Loja</button>
@@ -87,14 +88,14 @@
     </div>
   </section>
 
-  <!-- ===== TELA CAMPANHA ===== -->
+  <!-- ===== TELA CAMPANHA (usada pelos 2 modos) ===== -->
   <section id="tela-campanha" class="tela">
     <header class="sub-header">
-      <h2>⚔️ Campanha</h2>
+      <h2 id="camp-titulo">⚔️ Campanha</h2>
       <span class="chip">💰 <b id="camp-pontos">0</b> pts</span>
       <button class="btn btn-sec" id="btn-camp-voltar">Voltar</button>
     </header>
-    <p class="sub-desc">Derrote os oponentes em ordem — cada um é mais forte que o anterior. Cada vitória rende pontos.</p>
+    <p class="sub-desc" id="camp-desc">Derrote os oponentes em ordem — cada um é mais forte que o anterior. Cada vitória rende ouro.</p>
     <div id="campanha-lista"></div>
   </section>
 
@@ -113,6 +114,10 @@
         <button class="btn filtro-btn" data-filtro="faltam">🛒 Faltam</button>
       </div>
     </header>
+    <div class="loja-vida">
+      <span class="loja-vida-info">❤️ Vida máxima (Campanha Vida): <b id="loja-vidamax">50</b></span>
+      <button class="btn btn-vida" id="btn-comprar-vida">+25 de vida · 💰 <b id="loja-vida-custo">100</b></button>
+    </div>
     <p class="sub-desc">Cartas cinzas ainda não foram compradas — clique para comprar. O preço depende da raridade.</p>
     <div id="loja-msg"></div>
     <div id="loja-grid"></div>
@@ -131,6 +136,7 @@
         <div class="placar-lado meu">
           <span class="placar-nome" id="nome-jogador">VOCÊ</span>
           <span class="placar-cartas" id="cartas-jogador">0</span>
+          <div class="hp-bar" id="hp-jogador"><div class="hp-fill"></div></div>
         </div>
       </div>
       <div class="placar-centro">
@@ -142,6 +148,7 @@
         <div class="placar-lado cpu">
           <span class="placar-nome">OPONENTE</span>
           <span class="placar-cartas" id="cartas-cpu">0</span>
+          <div class="hp-bar" id="hp-cpu"><div class="hp-fill"></div></div>
         </div>
         <div class="avatar avatar-oponente" id="avatar-oponente">🤖</div>
         <button class="btn btn-mini sair" id="btn-sair">✕ Sair</button>

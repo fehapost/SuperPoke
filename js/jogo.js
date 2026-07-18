@@ -103,12 +103,44 @@ function ouroBaseNivel(nivel){ return 25 + nivel*15; }
 function bonusPrimeiraVez(){ return 60; }
 function ehBoss(nivel){ return nivel >= 21; }   // bosses finais têm lendários garantidos
 
+/* ===== CAMPANHA VIDA (modo pontos de vida) — 20 níveis ===== */
+const NIVEIS_VIDA = [
+  {n:1,  nome:"Duelista Kai",       raridades:["Comum"]},
+  {n:2,  nome:"Recruta Vera",       raridades:["Comum"]},
+  {n:3,  nome:"Gladiadora Sol",     raridades:["Comum","Incomum"]},
+  {n:4,  nome:"Sentinela Rex",      raridades:["Incomum"]},
+  {n:5,  nome:"Bruxo Aldo",         raridades:["Incomum"]},
+  {n:6,  nome:"Caçadora Íris",      raridades:["Incomum","Raro"]},
+  {n:7,  nome:"Templária Nara",     raridades:["Raro"]},
+  {n:8,  nome:"Bárbaro Thor",       raridades:["Raro"]},
+  {n:9,  nome:"Arcanista Lux",      raridades:["Raro","Super Raro"]},
+  {n:10, nome:"Sombra Corvo",       raridades:["Super Raro"]},
+  {n:11, nome:"Valquíria Edda",     raridades:["Super Raro"]},
+  {n:12, nome:"Golem Ferro",        raridades:["Super Raro"]},
+  {n:13, nome:"Feiticeiro Onix",    raridades:["Super Raro","Lendário"]},
+  {n:14, nome:"Dragão Escarlate",   raridades:["Lendário"]},
+  {n:15, nome:"Colosso Titânio",    raridades:["Lendário"]},
+  {n:16, nome:"Fênix Solar",        raridades:["Lendário"]},
+  {n:17, nome:"Leviatã Abissal",    raridades:["Lendário"]},
+  {n:18, nome:"Guardião Eterno",    raridades:["Lendário","Mítico"]},
+  {n:19, nome:"Imperador Astral",   raridades:["Lendário Supremo","Mítico"]},
+  {n:20, nome:"AVATAR SUPREMO",     raridades:["Lendário","Lendário Supremo","Mítico"]},
+];
+const MAX_NIVEL_VIDA = NIVEIS_VIDA.length;
+// Pontos de vida do oponente por nível (cresce com a fase)
+function vidaOponente(nivel){ return 50 + (nivel-1)*15; }
+function ouroBaseNivelVida(nivel){ return 30 + nivel*18; }
+const VIDA_INICIAL = 50;
+const VIDA_INCREMENTO = 25;
+function custoVida(){ return progresso.vidaMax * 2; }   // preço para comprar +25 de vida
+
 let progresso = carregarProgresso();
 
 function progressoPadrao(){
   // owned vazio: o jogador escolhe seus 3 primeiros Pokémon na tela inicial
   return { owned: [], pontos: 0, nivel: 1, vitorias: 0, derrotas: 0,
-           timeFavorito: [], nome: "Treinador", foto: "🧑" };
+           timeFavorito: [], nome: "Treinador", foto: "🧑",
+           nivelVida: 1, vidaMax: VIDA_INICIAL };
 }
 function carregarProgresso(){
   try{
@@ -121,6 +153,8 @@ function carregarProgresso(){
         if(!Array.isArray(o.timeFavorito)) o.timeFavorito = [];
         if(typeof o.nome !== "string") o.nome = "Treinador";
         if(typeof o.foto !== "string") o.foto = "🧑";
+        if(typeof o.nivelVida !== "number") o.nivelVida = 1;
+        if(typeof o.vidaMax !== "number") o.vidaMax = VIDA_INICIAL;
         return o;
       }
     }
@@ -193,7 +227,8 @@ const MAX_EMPATES_SEGUIDOS = 3; // empates seguidos -> empate
 const estado = {
   jogador:[], cpu:[], rodada:0, eliminadas:0, premioPool:[],
   elimJogador:[], elimCpu:[], empatesSeguidos:0,
-  turnoDe:"jogador", travado:false, contexto:{tipo:"livre"}
+  turnoDe:"jogador", travado:false, contexto:{tipo:"livre"},
+  modoVida:false, hpJogador:0, hpCpu:0, hpJogadorMax:0, hpCpuMax:0
 };
 
 function iniciarBatalha(deckJogador, deckCpu, contexto){
@@ -207,6 +242,13 @@ function iniciarBatalha(deckJogador, deckCpu, contexto){
   estado.turnoDe = "jogador";
   estado.travado = false;
   estado.contexto = contexto;
+  // modo pontos de vida
+  estado.modoVida = !!contexto.modoVida;
+  estado.hpJogadorMax = contexto.modoVida ? progresso.vidaMax : 0;
+  estado.hpCpuMax = contexto.modoVida ? contexto.hpCpu : 0;
+  estado.hpJogador = estado.hpJogadorMax;
+  estado.hpCpu = estado.hpCpuMax;
+  document.querySelector("#tela-jogo").classList.toggle("modo-vida", estado.modoVida);
   $("#log").innerHTML = "";
   $("#efeito-camada").className = "";
   $("#oponente-info").textContent = contexto.titulo || "";
@@ -275,6 +317,23 @@ function iniciarNivel(nivel, meuDeck){
   estado.premioPool = ids;   // definido após iniciarBatalha (que zera o estado)
 }
 
+// Campanha VIDA: duelo por pontos de vida (dano = diferença do atributo)
+function iniciarNivelVida(nivel, meuDeck){
+  const info = NIVEIS_VIDA[nivel-1];
+  if(!meuDeck || !meuDeck.length){
+    meuDeck = embaralhar(cartasPossuidas()).slice(0, 5);
+    if(meuDeck.length === 0) meuDeck = CARTAS_INICIAIS.map(cartaPorId);
+  }
+  const {deck:cpuDeck, ids} = gerarDeckOponente(info, tamanhoDeckOponente(nivel));
+  iniciarBatalha(meuDeck, cpuDeck, {
+    tipo:"campanha-vida", nivel,
+    modoVida:true, hpCpu: vidaOponente(nivel),
+    titulo:`Vida ${nivel} · ${info.nome}`,
+    avatarOp: avatarDoNivel(nivel + 4)
+  });
+  estado.premioPool = ids;
+}
+
 /* ---------- Batalha livre (2 modos) ---------- */
 function escolherBatalhaLivre(){ $("#modal-livre").hidden = false; }
 function batalhaLivre(modo){
@@ -299,9 +358,11 @@ function batalhaLivre(modo){
 
 /* ---------- Seleção de time (antes da campanha) ---------- */
 let _pendingNivel = 1;
+let _pendingModo = "normal";   // "normal" (cartas) ou "vida"
 const _selecionadas = new Set();
-function escolherTimeParaNivel(nivel){
+function escolherTimeParaNivel(nivel, modo){
   _pendingNivel = nivel;
+  _pendingModo = modo || "normal";
   _selecionadas.clear();
   // pré-seleciona o time favorito (só cartas que possui, até 5)
   (progresso.timeFavorito || []).forEach(id=>{
@@ -334,11 +395,19 @@ function atualizarStatsSelecao(){
   $("#sel-der").textContent = d;
   $("#sel-perc").textContent = part ? Math.round(v/part*100) : 0;
   $("#sel-part").textContent = part;
-  const info = NIVEIS[_pendingNivel-1];
-  const bonus = _pendingNivel === progresso.nivel ? bonusPrimeiraVez() : 0;
-  const ouro = ouroBaseNivel(_pendingNivel) + bonus;
+  let info, ouro, bonus, extra = "";
+  if(_pendingModo === "vida"){
+    info = NIVEIS_VIDA[_pendingNivel-1];
+    bonus = _pendingNivel === progresso.nivelVida ? 60 : 0;
+    ouro = ouroBaseNivelVida(_pendingNivel) + bonus;
+    extra = ` · Oponente com <b class="ouro-txt">❤ ${vidaOponente(_pendingNivel)}</b> de vida (você: ${progresso.vidaMax})`;
+  } else {
+    info = NIVEIS[_pendingNivel-1];
+    bonus = _pendingNivel === progresso.nivel ? bonusPrimeiraVez() : 0;
+    ouro = ouroBaseNivel(_pendingNivel) + bonus;
+  }
   $("#sel-recompensa").innerHTML =
-    `Nível ${_pendingNivel} · <b>${info.nome}</b> — vencendo você ganha <b class="ouro-txt">💰 ${ouro} de ouro</b>${bonus?" (bônus de 1ª vez)":""}`;
+    `Nível ${_pendingNivel} · <b>${info.nome}</b> — vencendo você ganha <b class="ouro-txt">💰 ${ouro} de ouro</b>${bonus?" (bônus de 1ª vez)":""}${extra}`;
 }
 // Atualiza SÓ a carta clicada (gira ela, sem re-renderizar as outras)
 function toggleSelecao(id, el){
@@ -364,17 +433,35 @@ function toggleSelecao(id, el){
 function confirmarSelecao(){
   const deck = [..._selecionadas].map(cartaPorId).filter(Boolean);
   if(!deck.length) return;
-  iniciarNivel(_pendingNivel, deck);
+  if(_pendingModo === "vida") iniciarNivelVida(_pendingNivel, deck);
+  else iniciarNivel(_pendingNivel, deck);
 }
 
 function atualizarPlacar(){
-  $("#cartas-jogador").textContent = estado.jogador.length;
-  $("#cartas-cpu").textContent     = estado.cpu.length;
-  $("#rodada-info").textContent    = "Rodada " + estado.rodada;
-  $("#mesa-info").textContent = estado.eliminadas
-    ? `☠ ${estado.eliminadas} eliminada(s)` : "";
+  $("#rodada-info").textContent = "Rodada " + estado.rodada;
+  if(estado.modoVida){
+    $("#cartas-jogador").textContent = "❤ " + estado.hpJogador;
+    $("#cartas-cpu").textContent     = "❤ " + estado.hpCpu;
+    setBarraVida("#hp-jogador", estado.hpJogador, estado.hpJogadorMax);
+    setBarraVida("#hp-cpu",     estado.hpCpu,     estado.hpCpuMax);
+    $("#mesa-info").textContent = "duelo de vida";
+  } else {
+    $("#cartas-jogador").textContent = estado.jogador.length;
+    $("#cartas-cpu").textContent     = estado.cpu.length;
+    $("#mesa-info").textContent = estado.eliminadas ? `☠ ${estado.eliminadas} eliminada(s)` : "";
+  }
   atualizarMao();
   atualizarMaoOponente();
+}
+function setBarraVida(sel, hp, max){
+  const bar = $(sel);
+  if(!bar) return;
+  const pct = max > 0 ? Math.max(0, Math.min(100, hp/max*100)) : 0;
+  const fill = bar.querySelector(".hp-fill");
+  if(fill){
+    fill.style.width = pct + "%";
+    fill.classList.toggle("baixa", pct <= 30);
+  }
 }
 
 // mini-carta virada para baixo (verso)
@@ -465,7 +552,11 @@ function agendarProxima(segundos){
 
 function proximaRodada(){
   limparTimers();
-  if(estado.jogador.length === 0 || estado.cpu.length === 0) return finalizar();
+  if(estado.modoVida){
+    if(estado.hpJogador <= 0 || estado.hpCpu <= 0) return finalizar();
+  } else if(estado.jogador.length === 0 || estado.cpu.length === 0){
+    return finalizar();
+  }
   // empate: 3 empates seguidos ou limite de rodadas
   if(estado.empatesSeguidos >= MAX_EMPATES_SEGUIDOS || estado.rodada >= MAX_RODADAS)
     return finalizar(true);
@@ -551,6 +642,38 @@ function resolverRodada(venc, meu, seu, attr, vMeu, vSeu){
   const jc = document.querySelector("#carta-jogador .carta");
   const cc = document.querySelector("#carta-cpu .carta");
   let msg, cls;
+
+  // ===== MODO VIDA: dano = diferença do atributo; cartas voltam ao fundo (não eliminam) =====
+  if(estado.modoVida){
+    estado.jogador.push(meu);
+    estado.cpu.push(seu);
+    const dano = Math.abs(vMeu - vSeu);
+    if(venc === "jogador"){
+      estado.hpCpu = Math.max(0, estado.hpCpu - dano);
+      estado.empatesSeguidos = 0;
+      msg = `✔ ${meu.nome} venceu em ${attr.nome} (${vMeu}×${vSeu}) — oponente perde ${dano} de vida!`;
+      cls = "log-vitoria"; $("#vs-texto").textContent = "◀"; estado.turnoDe = "jogador";
+      if(jc) jc.classList.add("efeito-vitoria"); if(cc) cc.classList.add("efeito-derrota");
+      efeitoTela("vitoria"); Som.play("vencerRodada");
+    } else if(venc === "cpu"){
+      estado.hpJogador = Math.max(0, estado.hpJogador - dano);
+      estado.empatesSeguidos = 0;
+      msg = `✘ ${seu.nome} venceu em ${attr.nome} (${vSeu}×${vMeu}) — você perde ${dano} de vida!`;
+      cls = "log-derrota"; $("#vs-texto").textContent = "▶"; estado.turnoDe = "cpu";
+      if(jc) jc.classList.add("efeito-derrota"); if(cc) cc.classList.add("efeito-vitoria");
+      efeitoTela("derrota"); Som.play("perderRodada");
+    } else {
+      estado.empatesSeguidos++;
+      msg = `= Empate em ${attr.nome} (${vMeu}) — ninguém perde vida (${estado.empatesSeguidos}/${MAX_EMPATES_SEGUIDOS})`;
+      cls = "log-empate"; $("#vs-texto").textContent = "="; efeitoTela("empate"); Som.play("empate");
+      estado.turnoDe = estado.turnoDe === "jogador" ? "cpu" : "jogador";
+    }
+    addLog(msg, cls);
+    atualizarPlacar();
+    const segV = estado.chooserDaRodada === "cpu" ? 2 : 6;
+    agendarProxima(segV);
+    return;
+  }
 
   if(venc === "jogador"){
     // carta do oponente é ELIMINADA (sai do jogo); a sua volta para o fundo
@@ -650,9 +773,9 @@ function botaoFim(cont, texto, cls, fn){
 function finalizar(empate){
   limparTimers();
   const ctx = estado.contexto || {tipo:"livre"};
-  const venceu = !empate && estado.cpu.length === 0;
+  const venceu = !empate && (estado.modoVida ? estado.hpCpu <= 0 : estado.cpu.length === 0);
 
-  // Vitória de campanha → tela de prêmio (celebração + escolher carta do adversário)
+  // Vitória de campanha (cartas) → tela de prêmio (escolher carta do adversário)
   if(ctx.tipo === "campanha" && venceu) return abrirPremio(ctx);
 
   mostrarTela("tela-fim");
@@ -660,7 +783,8 @@ function finalizar(empate){
   t.classList.remove("venceu","perdeu","empatou");
   acoes.innerHTML = "";
   const emCampanha = ctx.tipo === "campanha";
-  let autoAvancar = emCampanha ? abrirCampanha : irMenu;
+  const emVida = ctx.tipo === "campanha-vida";
+  let autoAvancar = emVida ? abrirCampanhaVida : (emCampanha ? abrirCampanha : irMenu);
 
   if(empate){
     Som.play("empate");
@@ -670,18 +794,48 @@ function finalizar(empate){
       ? `limite de ${MAX_RODADAS} rodadas atingido`
       : `${MAX_EMPATES_SEGUIDOS} empates seguidos`;
     s.innerHTML = `A batalha terminou empatada (${motivo}). Ninguém venceu.`;
-    if(emCampanha){
+    if(emVida){
+      botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel, "vida"));
+      botaoFim(acoes, "❤️ Campanha Vida", "btn-sec", abrirCampanhaVida);
+    } else if(emCampanha){
       botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel));
       botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
     } else {
       botaoFim(acoes, "↺ Jogar de novo", "btn-grande", escolherBatalhaLivre);
       botaoFim(acoes, "Menu inicial", "btn-sec", irMenu);
     }
-  } else if(emCampanha){       // DERROTA na campanha
+  } else if(emVida){          // CAMPANHA VIDA (vitória ou derrota por pontos de vida)
+    if(venceu){
+      Som.play("vencerPartida"); confete();
+      const info = NIVEIS_VIDA[ctx.nivel-1];
+      const primeiraVez = ctx.nivel === progresso.nivelVida;
+      const ganho = ouroBaseNivelVida(ctx.nivel) + (primeiraVez ? 60 : 0);
+      progresso.pontos += ganho;
+      progresso.vitorias = (progresso.vitorias||0) + 1;
+      if(primeiraVez && progresso.nivelVida < MAX_NIVEL_VIDA) progresso.nivelVida++;
+      salvarProgresso();
+      const zerou = primeiraVez && ctx.nivel === MAX_NIVEL_VIDA;
+      t.textContent = zerou ? "👑 LENDA!" : "🏆 VITÓRIA!"; t.classList.add("venceu");
+      s.innerHTML = `Você derrotou <b>${info.nome}</b> com ${estado.hpJogador} de vida restante!<br>`+
+        `<span class="ganho">+${ganho} de ouro</span>${primeiraVez?' <span class="bonus">(bônus 1ª vez)</span>':''}`+
+        (zerou ? "<br>🎉 Você zerou a Campanha Vida!" : "");
+    } else {
+      Som.play("perderPartida");
+      const info = NIVEIS_VIDA[ctx.nivel-1];
+      progresso.derrotas = (progresso.derrotas||0) + 1;
+      progresso.pontos += 10;
+      salvarProgresso();
+      t.textContent = "☠ DERROTA"; t.classList.add("perdeu");
+      s.innerHTML = `<b>${info.nome}</b> esgotou sua vida...<br><span class="ganho">+10 de ouro</span> de consolação. Compre mais <b>vida</b> na loja!`;
+    }
+    botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel, "vida"));
+    botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
+    botaoFim(acoes, "❤️ Campanha Vida", "btn-sec", abrirCampanhaVida);
+  } else if(emCampanha){       // DERROTA na campanha de cartas
     Som.play("perderPartida");
     const info = NIVEIS[ctx.nivel-1];
     progresso.derrotas = (progresso.derrotas||0) + 1;
-    progresso.pontos += 10;    // consolação: derrota dá 10 moedas
+    progresso.pontos += 10;
     salvarProgresso();
     t.textContent = "☠ DERROTA";
     t.classList.add("perdeu");
@@ -808,28 +962,39 @@ function mostrarBotoesPremio(ctx){
 /* ===================================================================
    CAMPANHA (mapa/escada)
    =================================================================== */
-function abrirCampanha(){
+function abrirCampanha(){ renderCampanha("normal"); }
+function abrirCampanhaVida(){ renderCampanha("vida"); }
+function renderCampanha(modo){
+  const vida = modo === "vida";
   mostrarTela("tela-campanha");
   $("#camp-pontos").textContent = progresso.pontos;
+  $("#camp-titulo").textContent = vida ? "❤️ Campanha Vida" : "⚔️ Campanha";
+  $("#camp-desc").innerHTML = vida
+    ? "Duelo por <b>pontos de vida</b>: o dano é a diferença do atributo. Compre mais vida na loja!"
+    : "Derrote os oponentes em ordem — cada um é mais forte que o anterior. Cada vitória rende ouro.";
+  const lista = vida ? NIVEIS_VIDA : NIVEIS;
+  const nivelAtual = vida ? progresso.nivelVida : progresso.nivel;
   const cont = $("#campanha-lista");
   cont.innerHTML = "";
-  NIVEIS.forEach(info=>{
-    const estadoNivel = info.n < progresso.nivel ? "vencido"
-                      : info.n === progresso.nivel ? "atual" : "bloqueado";
+  lista.forEach(info=>{
+    const estadoNivel = info.n < nivelAtual ? "vencido"
+                      : info.n === nivelAtual ? "atual" : "bloqueado";
     const el = document.createElement("button");
     el.className = "nivel-item " + estadoNivel;
     el.disabled = estadoNivel === "bloqueado";
     const tag = estadoNivel==="vencido" ? "✔ vencido"
               : estadoNivel==="atual" ? "▶ Desafiar" : "🔒 bloqueado";
-    const bonus = info.n === progresso.nivel ? bonusPrimeiraVez() : 0;
-    const ouro = ouroBaseNivel(info.n) + bonus;
+    const bonus = info.n === nivelAtual ? (vida ? 60 : bonusPrimeiraVez()) : 0;
+    const ouro = (vida ? ouroBaseNivelVida(info.n) : ouroBaseNivel(info.n)) + bonus;
+    const infoExtra = vida
+      ? `<small class="nivel-ouro">❤ ${vidaOponente(info.n)} vida · 💰 ${ouro}</small>`
+      : `<small class="nivel-ouro">💰 ${ouro} de ouro${bonus?" (1ª vez)":""}</small>`;
     el.innerHTML =
       `<span class="nivel-num">${info.n}</span>`+
       `<span class="nivel-info"><b>${info.nome}</b>`+
-      `<small>${info.raridades.join(" · ")}</small>`+
-      `<small class="nivel-ouro">💰 ${ouro} de ouro${bonus?" (1ª vez)":""}</small></span>`+
+      `<small>${info.raridades.join(" · ")}</small>${infoExtra}</span>`+
       `<span class="nivel-tag">${tag}</span>`;
-    if(estadoNivel !== "bloqueado") el.onclick = ()=>escolherTimeParaNivel(info.n);
+    if(estadoNivel !== "bloqueado") el.onclick = ()=>escolherTimeParaNivel(info.n, modo);
     cont.appendChild(el);
   });
 }
@@ -849,7 +1014,27 @@ function abrirLoja(){
   mostrarTela("tela-loja");
   $("#loja-busca").value = "";
   $("#loja-msg").className = "";
+  atualizarLojaVida();
   renderLoja("");
+}
+function atualizarLojaVida(){
+  $("#loja-vidamax").textContent = progresso.vidaMax;
+  $("#loja-vida-custo").textContent = custoVida();
+}
+function comprarVida(){
+  const custo = custoVida();
+  if(progresso.pontos < custo){
+    Som.play("erro");
+    flashLoja(`Ouro insuficiente para +25 de vida — faltam ${custo - progresso.pontos} pts`, true);
+    return;
+  }
+  progresso.pontos -= custo;
+  progresso.vidaMax += VIDA_INCREMENTO;
+  salvarProgresso();
+  Som.play("comprar");
+  atualizarLojaVida();
+  $("#loja-pontos").textContent = progresso.pontos;
+  flashLoja(`❤️ Vida máxima agora é ${progresso.vidaMax}! (-${custo} pts)`);
 }
 let _filtroLoja = "todos";
 function renderLoja(filtro){
@@ -1127,9 +1312,11 @@ document.addEventListener("DOMContentLoaded", ()=>{
   }));
   atualizarSomUI();
   $("#btn-campanha").addEventListener("click", abrirCampanha);
+  $("#btn-campanha-vida").addEventListener("click", abrirCampanhaVida);
   $("#btn-loja").addEventListener("click", abrirLoja);
   $("#btn-colecao").addEventListener("click", abrirColecao);
   $("#btn-livre").addEventListener("click", escolherBatalhaLivre);
+  $("#btn-comprar-vida").addEventListener("click", comprarVida);
   $("#btn-reset").addEventListener("click", resetProgresso);
 
   // modal de batalha livre (2 modos)
@@ -1166,7 +1353,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   // seleção de time
   $("#btn-sel-confirmar").addEventListener("click", confirmarSelecao);
-  $("#btn-sel-voltar").addEventListener("click", abrirCampanha);
+  $("#btn-sel-voltar").addEventListener("click", ()=> _pendingModo==="vida" ? abrirCampanhaVida() : abrirCampanha());
 
   // revelação do prêmio
   $("#btn-reveal-ok").addEventListener("click", fecharRevelacao);
@@ -1183,6 +1370,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
   $("#btn-sair").addEventListener("click", ()=>{
     limparTimers();
     const ctx = estado.contexto || {};
-    ctx.tipo === "campanha" ? abrirCampanha() : irMenu();
+    if(ctx.tipo === "campanha-vida") abrirCampanhaVida();
+    else if(ctx.tipo === "campanha") abrirCampanha();
+    else irMenu();
   });
 });

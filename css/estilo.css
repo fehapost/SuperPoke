@@ -65,6 +65,22 @@ body{
 .placar-centro{text-align:center;font-weight:700}
 .mesa-info{display:block;font-size:.78rem;color:var(--amarelo);min-height:1em;font-weight:600}
 
+/* barra de vida (modo Campanha Vida) */
+.hp-bar{display:none;width:74px;height:9px;background:rgba(0,0,0,.45);border-radius:5px;
+  overflow:hidden;margin-top:3px;border:1px solid rgba(255,255,255,.25)}
+#tela-jogo.modo-vida .hp-bar{display:block}
+#tela-jogo.modo-vida .placar-cartas{font-size:1.35rem}
+.hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#2e9e3f,#7ff0a8);
+  border-radius:5px;transition:width .45s ease}
+.hp-fill.baixa{background:linear-gradient(90deg,#e3350d,#ff9d8a)}
+
+/* botões/painel da Campanha Vida */
+.btn-vida{background:#c2185b}
+.loja-vida{width:100%;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+  background:rgba(194,24,91,.18);border:1px solid rgba(244,143,177,.45);border-radius:12px;
+  padding:10px 14px;margin-top:12px}
+.loja-vida-info{font-weight:700;color:#f8bbd0}
+
 /* ===== ARENA (mão + mesa) ===== */
 #arena{width:100%;display:flex;align-items:flex-start;justify-content:center;gap:12px}
 
@@ -554,31 +570,75 @@ body{
   .carta-attrs{gap:4px 6px;padding:4px 10px 12px}
   .ic{width:16px;height:16px}
 }
-/* Celular estreito: encolhe os cards e volta atributos p/ 1 coluna (cabe melhor) */
+/* ===== CELULAR: batalha compacta que cabe na tela sem rolar ===== */
 @media(max-width:560px){
-  .slot-carta{min-width:0}
-  .carta,.carta-verso{width:100%;max-width:172px}
-  .carta-verso{height:340px}
-  .carta-img{height:88px}
-  .carta-img img{max-height:82px}
-  .carta-nome{font-size:1rem}
-  .carta-num{font-size:.72rem}
-  .tag-tipo{font-size:.5rem;padding:1px 5px}
-  .carta-attrs{grid-template-columns:1fr;grid-template-rows:auto;
-    grid-auto-flow:row;gap:3px;padding:3px 8px 10px}
-  .attr .attr-nome{font-size:.64rem}
-  .attr .attr-val{font-size:1rem}
+  body{padding:8px}
+  .tela.ativa{gap:12px}
+
+  /* --- BATALHA compacta --- */
+  #tela-jogo.ativa{gap:5px}
+  #placar{padding:5px 8px}
+  .placar-nome{font-size:.62rem;letter-spacing:0}
+  .placar-cartas{font-size:1.2rem}
+  #tela-jogo.modo-vida .placar-cartas{font-size:.95rem}
+  .hp-bar{width:56px;height:7px}
+  .avatar{width:30px;height:30px;font-size:1.1rem;border-width:2px}
+  .btn-mini{padding:3px 7px;font-size:.62rem}
+  .botoes-mini{gap:3px}
+  .placar-canto{gap:5px}
+  #oponente-info{font-size:.66rem}
+  #rodada-info{font-size:.78rem}
+  .mesa-info{font-size:.62rem}
+
+  /* cartas pequenas, atributos em 2 colunas só com ÍCONE + número */
+  .slot-carta{min-width:0;max-width:none}
+  .carta,.carta-verso{width:100%;max-width:150px}
+  .carta-verso{height:190px}
+  .carta-topo{padding:5px 8px 2px}
+  .carta-num{font-size:.6rem}
+  .tag-tipo{font-size:.46rem;padding:1px 4px}
+  .carta-img{height:56px;margin:1px 8px 0}
+  .carta-img img{max-height:52px}
+  .carta-nome{font-size:.82rem;padding:2px 4px 0}
+  .carta-rar{font-size:.5rem;letter-spacing:1px;margin-bottom:2px}
+  .carta-attrs{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,auto);
+    grid-auto-flow:column;gap:3px;padding:2px 6px 8px}
+  .attr{padding:3px 4px;border-width:1.5px;justify-content:center;gap:3px}
+  .attr .attr-nome>span{display:none}   /* esconde o texto, mostra só o ícone */
+  .attr .attr-nome{gap:0}
+  .attr .attr-val{font-size:.9rem;padding-left:2px}
   .ic{width:15px;height:15px}
-  #mesa{gap:4px}
-  #vs-texto{font-size:1.1rem}
-  /* mãos viram faixas horizontais (jogador acima, oponente abaixo da mesa) */
-  #arena{flex-direction:column;align-items:stretch}
-  #mao,#mao-oponente{width:100%;max-height:none;flex-direction:row;gap:6px;
-    overflow-x:auto;overflow-y:hidden;padding:6px}
+  #mesa{gap:4px;max-width:100%}
+  #vs-texto{font-size:1rem}
+
+  /* mãos: faixas horizontais finas (jogador em cima, oponente embaixo) */
+  #arena{flex-direction:column;align-items:stretch;gap:5px}
+  #mao,#mao-oponente{width:100%;max-height:none;flex-direction:row;gap:5px;
+    overflow-x:auto;overflow-y:hidden;padding:4px 5px;background:rgba(0,0,0,.2)}
   #mao-oponente{order:3}
   .mao-titulo{display:none}
-  #mao-lista,#mao-op-lista{flex-direction:row;gap:8px}
-  .mini-carta{flex:0 0 auto;width:64px}
-  .mini-carta img{width:46px;height:42px}
-  .mini-carta.mini-verso{height:60px;width:52px}
+  #mao-lista,#mao-op-lista{flex-direction:row;gap:5px}
+  .mini-carta{flex:0 0 auto;width:40px;padding:3px 2px 2px;border-width:1.5px}
+  .mini-carta img{width:30px;height:26px}
+  .mini-nome{display:none}
+  .mini-rot{font-size:.42rem;padding:0 3px;top:-5px}
+  .mini-carta.mini-verso{height:38px;width:34px}
+  .mini-carta.mini-verso::after{width:18px;height:18px;border-width:2px}
+  .mini-carta.mini-verso::before{width:5px;height:5px;border-width:2px}
+
+  /* ações e histórico compactos e colados nas cartas */
+  #turno-aviso{font-size:.78rem;min-height:16px;margin-top:0}
+  #turno-aviso .ic{width:16px;height:16px}
+  .btn-prox{font-size:.9rem;padding:8px 18px;margin-top:0}
+  .crono{width:26px;height:26px;margin-left:5px}
+  .crono .cr-num{font-size:.72rem}
+  #log-box{padding:5px 9px}
+  .log-titulo{font-size:.66rem;margin-bottom:3px;padding-bottom:2px}
+  #log{max-height:52px;font-size:.68rem}
+
+  /* menus/telas gerais */
+  .logo-pokemon{font-size:2.2rem}
+  .logo-super{font-size:1.5rem}
+  .btn-grande{padding:12px 22px;font-size:1.05rem}
+  .avatar-grande{width:60px;height:60px;font-size:2rem}
 }
