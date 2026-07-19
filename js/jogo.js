@@ -244,7 +244,7 @@ const MAX_RODADAS = 50;        // limite de rodadas -> empate
 const MAX_EMPATES_SEGUIDOS = 3; // empates seguidos -> empate
 
 const estado = {
-  jogador:[], cpu:[], rodada:0, eliminadas:0, premioPool:[],
+  jogador:[], cpu:[], rodada:0, eliminadas:0,
   elimJogador:[], elimCpu:[], empatesSeguidos:0,
   turnoDe:"jogador", travado:false, contexto:{tipo:"livre"},
   modoVida:false, hpJogador:0, hpCpu:0, hpJogadorMax:0, hpCpuMax:0
@@ -289,19 +289,6 @@ function tamanhoDeckOponente(nivel){ return Math.min(5, 3 + Math.floor((nivel-1)
 /* ---------- Lendários / Míticos ---------- */
 const RARIDADES_LENDARIAS = ["Lendário","Lendário Supremo","Mítico"];
 function ehLendario(p){ return RARIDADES_LENDARIAS.includes(p.raridade); }
-const IDS_ULTRA = [150, 151];   // Mewtwo, Mew -> 1%
-function idsLendarios(){ return POKEMONS.filter(ehLendario).map(p=>p.id); }
-// prêmio-surpresa: 1% Mewtwo/Mew, +5% demais lendários; devolve id ou null
-function rolarLendario(excluir){
-  excluir = excluir || [];
-  const r = Math.random();
-  let cand;
-  if(r < 0.01) cand = IDS_ULTRA.slice();
-  else if(r < 0.06) cand = idsLendarios().filter(id=>!IDS_ULTRA.includes(id));
-  else return null;
-  cand = cand.filter(id=>!excluir.includes(id));
-  return cand.length ? cand[Math.floor(Math.random()*cand.length)] : null;
-}
 
 // Baralho do oponente: cartas REAIS da raridade do nível (sem inflar stats).
 // A dificuldade vem da raridade/poder das cartas, não de multiplicador.
@@ -324,16 +311,12 @@ function iniciarNivel(nivel, meuDeck){
     meuDeck = embaralhar(cartasPossuidas()).slice(0, 5);
     if(meuDeck.length === 0) meuDeck = CARTAS_INICIAIS.map(cartaPorId);
   }
-  const {deck:cpuDeck, ids} = gerarDeckOponente(info, tamanhoDeckOponente(nivel));
-  // prêmio-surpresa de lendário (5%/1%) fora dos bosses
-  const surpresa = rolarLendario(ids.concat(progresso.owned));
-  if(surpresa) ids.push(surpresa);
+  const {deck:cpuDeck} = gerarDeckOponente(info, tamanhoDeckOponente(nivel));
   iniciarBatalha(meuDeck, cpuDeck, {
     tipo:"campanha", nivel,
     titulo:`Nível ${nivel} · ${info.nome}`,
     avatarOp: avatarDoNivel(nivel)
   });
-  estado.premioPool = ids;   // definido após iniciarBatalha (que zera o estado)
 }
 
 // Campanha VIDA: duelo por pontos de vida (dano = diferença do atributo)
@@ -343,14 +326,13 @@ function iniciarNivelVida(nivel, meuDeck){
     meuDeck = embaralhar(cartasPossuidas()).slice(0, 5);
     if(meuDeck.length === 0) meuDeck = CARTAS_INICIAIS.map(cartaPorId);
   }
-  const {deck:cpuDeck, ids} = gerarDeckOponente(info, tamanhoDeckOponente(nivel));
+  const {deck:cpuDeck} = gerarDeckOponente(info, tamanhoDeckOponente(nivel));
   iniciarBatalha(meuDeck, cpuDeck, {
     tipo:"campanha-vida", nivel,
     modoVida:true, hpCpu: vidaOponente(nivel),
     titulo:`Vida ${nivel} · ${info.nome}`,
     avatarOp: avatarDoNivel(nivel + 4)
   });
-  estado.premioPool = ids;
 }
 
 /* ---------- Batalha livre (2 modos) ---------- */
@@ -372,7 +354,6 @@ function batalhaLivre(modo){
     meu = emb.slice(0,5); cpu = emb.slice(5,10);
   }
   iniciarBatalha(meu, cpu, {tipo:"livre", modo, titulo: modo==="meu" ? "Batalha livre (seus Pokémon)" : "Batalha livre"});
-  estado.premioPool = [];
 }
 
 /* ---------- Seleção de time (antes da campanha) ---------- */
@@ -525,6 +506,7 @@ function atualizarMaoOponente(){
 }
 
 /* ---------- Cronômetro circular reutilizável ---------- */
+const SEGUNDOS_TIMER = 5;    // timer padrão: rodada, vitória, derrota, vez do oponente
 const CRONO_CIRC = 100.53;   // 2*pi*16
 // markup do cronômetro (anel que preenche + número no centro)
 function htmlCrono(seg){
@@ -558,7 +540,6 @@ let _fimTimer = null;
 function limparTimers(){
   clearInterval(_tickTimer); _tickTimer = null;
   clearInterval(_fimTimer);  _fimTimer = null;
-  clearInterval(_revealTimer); _revealTimer = null;
 }
 function agendarProxima(segundos){
   limparTimers();
@@ -689,8 +670,7 @@ function resolverRodada(venc, meu, seu, attr, vMeu, vSeu){
     }
     addLog(msg, cls);
     atualizarPlacar();
-    const segV = estado.chooserDaRodada === "cpu" ? 2 : 6;
-    agendarProxima(segV);
+    agendarProxima(SEGUNDOS_TIMER);
     return;
   }
 
@@ -739,8 +719,7 @@ function resolverRodada(venc, meu, seu, attr, vMeu, vSeu){
   atualizarPlacar();
 
   // Timer da próxima rodada: 2s quando foi o oponente que escolheu, 6s quando foi você
-  const segundos = estado.chooserDaRodada === "cpu" ? 2 : 6;
-  agendarProxima(segundos);
+  agendarProxima(SEGUNDOS_TIMER);
 }
 
 /* ---------- Efeitos visuais ---------- */
@@ -793,9 +772,6 @@ function finalizar(empate){
   limparTimers();
   const ctx = estado.contexto || {tipo:"livre"};
   const venceu = !empate && (estado.modoVida ? estado.hpCpu <= 0 : estado.cpu.length === 0);
-
-  // Vitória de campanha (cartas) → tela de prêmio (escolher carta do adversário)
-  if(ctx.tipo === "campanha" && venceu) return abrirPremio(ctx);
 
   mostrarTela("tela-fim");
   const t = $("#fim-titulo"), s = $("#fim-sub"), acoes = $("#fim-acoes");
@@ -850,15 +826,33 @@ function finalizar(empate){
     botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel, "vida"));
     botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
     botaoFim(acoes, "❤️ Campanha Vida", "btn-sec", abrirCampanhaVida);
-  } else if(emCampanha){       // DERROTA na campanha de cartas
-    Som.play("perderPartida");
+  } else if(emCampanha){       // CAMPANHA DE CARTAS (vitória ou derrota) — recompensa em OURO
     const info = NIVEIS[ctx.nivel-1];
-    progresso.derrotas = (progresso.derrotas||0) + 1;
-    progresso.pontos += 10;
-    salvarProgresso();
-    t.textContent = "☠ DERROTA";
-    t.classList.add("perdeu");
-    s.innerHTML = `<b>${info.nome}</b> foi forte demais...<br><span class="ganho">+10 de ouro</span> de consolação. Compre cartas melhores na loja!`;
+    if(venceu){
+      Som.play("vencerPartida"); confete();
+      const primeiraVez = ctx.nivel === progresso.nivel;
+      const ganho = ouroBaseNivel(ctx.nivel) + (primeiraVez ? bonusPrimeiraVez() : 0);
+      progresso.pontos += ganho;
+      progresso.vitorias = (progresso.vitorias||0) + 1;
+      if(primeiraVez && progresso.nivel < MAX_NIVEL) progresso.nivel++;
+      const zerou = primeiraVez && ctx.nivel === MAX_NIVEL;
+      if(zerou) progresso.campanhaZerada = true;   // desbloqueia a loja de cartas avulsas
+      salvarProgresso();
+      t.textContent = zerou ? "👑 CAMPEÃO!" : "🏆 VITÓRIA!";
+      t.classList.add("venceu");
+      s.innerHTML = `Você derrotou <b>${info.nome}</b>!<br>`+
+        `<span class="ganho">+${ganho} de ouro</span>${primeiraVez?' <span class="bonus">(bônus 1ª vez)</span>':''} · Saldo: <b>${progresso.pontos}</b>`+
+        `<br><small>Use o ouro na <b>Loja</b> para comprar pacotes de cartas!</small>`+
+        (zerou ? "<br>🎉 Você zerou a campanha — loja de cartas avulsas liberada!" : "");
+    } else {
+      Som.play("perderPartida");
+      progresso.derrotas = (progresso.derrotas||0) + 1;
+      progresso.pontos += 10;
+      salvarProgresso();
+      t.textContent = "☠ DERROTA";
+      t.classList.add("perdeu");
+      s.innerHTML = `<b>${info.nome}</b> foi forte demais...<br><span class="ganho">+10 de ouro</span> de consolação. Compre pacotes na loja!`;
+    }
     botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel));
     botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
     botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
@@ -870,8 +864,6 @@ function finalizar(empate){
       if(ctx.modo === "meu"){
         progresso.pontos += 30;
         extra = ` <span class="ganho">+30 de ouro!</span>`;
-        const leg = rolarLendario(progresso.owned);
-        if(leg){ progresso.owned.push(leg); extra += `<br>✨ Que sorte! Você encontrou <b>${cartaPorId(leg).nome}</b>!`; }
         salvarProgresso();
       }
       s.innerHTML = `Você eliminou todas as cartas do oponente em ${estado.rodada} rodadas.${extra}`;
@@ -883,100 +875,10 @@ function finalizar(empate){
     botaoFim(acoes, "Menu inicial", "btn-sec", irMenu);
   }
 
-  // cronômetro circular de 5s → auto-avança
+  // cronômetro circular → auto-avança
   const host = $("#fim-crono");
-  host.innerHTML = htmlCrono(5);
-  _fimTimer = animarCrono(host, 5, ()=>{ limparTimers(); autoAvancar(); });
-}
-
-/* ---------- Tela de prêmio (vitória de campanha) ---------- */
-function abrirPremio(ctx){
-  limparTimers();
-  const info = NIVEIS[ctx.nivel-1];
-  const primeiraVez = ctx.nivel === progresso.nivel;
-  const ganho = ouroBaseNivel(ctx.nivel) + (primeiraVez ? bonusPrimeiraVez() : 0);
-  progresso.pontos += ganho;
-  progresso.vitorias = (progresso.vitorias||0) + 1;
-  if(primeiraVez && progresso.nivel < MAX_NIVEL) progresso.nivel++;
-  const zerou = primeiraVez && ctx.nivel === MAX_NIVEL;
-  if(zerou) progresso.campanhaZerada = true;   // desbloqueia a loja de cartas avulsas
-  salvarProgresso();
-
-  mostrarTela("tela-premio");
-  confete();
-  Som.play("vencerPartida");
-  $("#premio-titulo").textContent = zerou ? "👑 CAMPEÃO!" : "🏆 VITÓRIA!";
-  $("#premio-sub").innerHTML =
-    `Você derrotou <b>${info.nome}</b>! <span class="ganho">+${ganho} pts</span>`+
-    `${primeiraVez ? ' <span class="bonus">(bônus 1ª vez)</span>' : ''} · Saldo: <b>${progresso.pontos}</b> pts`+
-    (zerou ? "<br>🎉 Você venceu toda a campanha!" : "");
-
-  const pool = [...new Set(estado.premioPool)];
-  const temNovas = pool.some(id=>!progresso.owned.includes(id));
-  const grid = $("#premio-grid");
-  grid.innerHTML = "";
-
-  if(temNovas){
-    $("#premio-instru").innerHTML = "🎁 Escolha uma carta do baralho derrotado para levar:";
-  } else {
-    $("#premio-instru").innerHTML = "Você já tem todas as cartas dele — <b>+40 pts</b> de bônus!";
-    progresso.pontos += 40; salvarProgresso();
-    $("#premio-sub").innerHTML = $("#premio-sub").innerHTML.replace(/Saldo: <b>\d+<\/b>/, `Saldo: <b>${progresso.pontos}</b>`);
-  }
-
-  pool.forEach(id=>{
-    const jaTem = progresso.owned.includes(id);
-    const el = document.createElement("div");
-    el.className = "premio-item" + (jaTem ? " jatem" : "");
-    el.dataset.id = id;
-    el.innerHTML = htmlCarta(cartaPorId(id), {}) +
-      (jaTem ? '<div class="premio-badge">já na coleção</div>' : '<div class="premio-badge nova">✋ escolher</div>');
-    if(!jaTem) el.onclick = ()=>escolherPremio(id);
-    grid.appendChild(el);
-  });
-
-  // botões de navegação só quando NÃO há carta a escolher (senão, escolher → revela → vai p/ campanha)
-  $("#premio-acoes").innerHTML = "";
-  if(!temNovas) mostrarBotoesPremio(ctx);
-}
-
-let _revealTimer = null;
-function escolherPremio(id){
-  if(progresso.owned.includes(id)) return;
-  progresso.owned.push(id);
-  salvarProgresso();
-  Som.play("premio");
-  const p = cartaPorId(id);
-  $("#premio-grid").querySelectorAll(".premio-item").forEach(el=>{
-    el.classList.add("bloqueado");
-    el.onclick = null;
-    if(+el.dataset.id === id) el.classList.add("escolhida");
-  });
-  confete();
-
-  // revelação: carta vem para frente, fica grande, cronômetro de 5s (ou clique em OK)
-  $("#reveal-carta").innerHTML = htmlCarta(p, {});
-  const rev = $("#premio-reveal");
-  rev.hidden = false;
-  const okBtn = $("#btn-reveal-ok");
-  okBtn.innerHTML = `OK ▶ ${htmlCrono(5)}`;
-  clearInterval(_revealTimer);
-  _revealTimer = animarCrono(okBtn, 5, fecharRevelacao);
-}
-function fecharRevelacao(){
-  clearInterval(_revealTimer);
-  const rev = $("#premio-reveal");
-  if(rev) rev.hidden = true;
-  abrirCampanha();   // próxima tela
-}
-
-function mostrarBotoesPremio(ctx){
-  const acoes = $("#premio-acoes");
-  acoes.innerHTML = "";
-  if(ctx.nivel < MAX_NIVEL)
-    botaoFim(acoes, "Próximo desafio ▶", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel+1));
-  botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
-  botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
+  host.innerHTML = htmlCrono(SEGUNDOS_TIMER);
+  _fimTimer = animarCrono(host, SEGUNDOS_TIMER, ()=>{ limparTimers(); autoAvancar(); });
 }
 
 /* ===================================================================
@@ -1173,8 +1075,8 @@ function renderLoja(filtro){
     // Lendários/Míticos: mistério "?" — não vendidos (só em batalha)
     if(lendario && !dono){
       wrap.className = "loja-item misterio";
-      wrap.innerHTML = htmlCartaMisterio() + `<div class="loja-badge misterio">🔒 Só em batalha</div>`;
-      wrap.onclick = ()=>{ Som.play("erro"); flashLoja("🔒 Lendários e Míticos só vêm de batalhas (bosses ou sorte)!", true); };
+      wrap.innerHTML = htmlCartaMisterio() + `<div class="loja-badge misterio">🔒 Só em pacotes</div>`;
+      wrap.onclick = ()=>{ Som.play("erro"); flashLoja("🔒 Lendários e Míticos só saem nos pacotes (Raro, Lendário e Mitológico)!", true); };
       grid.appendChild(wrap);
       return;
     }
@@ -1500,9 +1402,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
   // seleção de time
   $("#btn-sel-confirmar").addEventListener("click", confirmarSelecao);
   $("#btn-sel-voltar").addEventListener("click", ()=> _pendingModo==="vida" ? abrirCampanhaVida() : abrirCampanha());
-
-  // revelação do prêmio
-  $("#btn-reveal-ok").addEventListener("click", fecharRevelacao);
 
   // regras
   $("#btn-regras").addEventListener("click", abrirRegras);

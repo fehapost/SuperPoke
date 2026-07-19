@@ -556,7 +556,7 @@ body{
 .premio-badge.nova{background:var(--amarelo);color:var(--tinta);font-size:.8rem}
 
 /* confete */
-#confete{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5}
+#confete{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:5}
 #confete i{position:absolute;top:-14px;width:9px;height:15px;border-radius:2px;
   animation:cair linear forwards}
 @keyframes cair{to{transform:translateY(105vh) rotate(720deg);opacity:.9}}
