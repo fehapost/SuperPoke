@@ -155,7 +155,8 @@ function progressoPadrao(){
   // owned vazio: o jogador escolhe seus 3 primeiros Pokémon na tela inicial
   return { owned: [], pontos: 0, nivel: 1, vitorias: 0, derrotas: 0,
            timeFavorito: [], nome: "Treinador", foto: "🧑",
-           nivelVida: 1, vidaMax: VIDA_INICIAL, campanhaZerada: false };
+           nivelVida: 1, vidaMax: VIDA_INICIAL, campanhaZerada: false,
+           nivelSuper: 1, lpSuper: 100 };
 }
 function carregarProgresso(){
   try{
@@ -171,6 +172,8 @@ function carregarProgresso(){
         if(typeof o.nivelVida !== "number") o.nivelVida = 1;
         if(typeof o.vidaMax !== "number") o.vidaMax = VIDA_INICIAL;
         if(typeof o.campanhaZerada !== "boolean") o.campanhaZerada = (o.nivel > MAX_NIVEL);
+        if(typeof o.nivelSuper !== "number") o.nivelSuper = 1;
+        if(typeof o.lpSuper !== "number") o.lpSuper = 100;
         return o;
       }
     }
@@ -939,6 +942,7 @@ function abrirLoja(){
   $("#loja-busca").value = "";
   $("#loja-msg").className = "";
   atualizarLojaVida();
+  if(typeof atualizarLojaSuper === "function") atualizarLojaSuper();
   renderPacotes();
   // loja de cartas avulsas só depois de zerar a campanha tradicional
   const desbloqueada = !!progresso.campanhaZerada;

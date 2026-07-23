@@ -64,6 +64,7 @@
     <div class="menu-botoes">
       <button class="btn btn-grande" id="btn-campanha">⚔️ CAMPANHA</button>
       <button class="btn btn-grande btn-vida" id="btn-campanha-vida">❤️ CAMPANHA VIDA</button>
+      <button class="btn btn-grande btn-super" id="btn-campanha-super">🃏 SUPER BATALHA</button>
     </div>
     <div class="menu-botoes">
       <button class="btn btn-sec" id="btn-loja">🛒 Loja</button>
@@ -140,6 +141,10 @@
     <div class="loja-vida">
       <span class="loja-vida-info">❤️ Vida máxima (Campanha Vida): <b id="loja-vidamax">50</b></span>
       <button class="btn btn-vida" id="btn-comprar-vida">+10 de vida · 💰 <b id="loja-vida-custo">40</b></button>
+    </div>
+    <div class="loja-vida loja-super">
+      <span class="loja-vida-info">🃏 LP da Super Batalha: <b id="loja-lpmax">100</b></span>
+      <button class="btn btn-super" id="btn-comprar-lp">+20 de LP · 💰 <b id="loja-lp-custo">80</b></button>
     </div>
 
     <!-- Loja de cartas avulsas (só depois de zerar a campanha) -->
@@ -271,6 +276,68 @@
     <div id="col-grid"></div>
   </section>
 
+  <!-- ===== SUPER BATTLE CHAMPIONSHIP (modo Yu-Gi-Oh) ===== -->
+  <section id="tela-super" class="tela">
+    <header id="sb-topo">
+      <div class="sb-lado cpu">
+        <div class="avatar avatar-oponente" id="sb-avatar-cpu">🃏</div>
+        <div class="sb-lp-box">
+          <span class="sb-lp-nome" id="sb-nome-cpu">Oponente</span>
+          <span class="sb-lp">❤ <b id="sb-lp-cpu">100</b> LP</span>
+          <div class="hp-bar" id="sb-lpbar-cpu-w"><div class="hp-fill"></div></div>
+          <span class="sb-mao-info">🃏 <b id="sb-mao-cpu-n">0</b> · 📚 <b id="sb-deck-cpu-n">0</b></span>
+        </div>
+      </div>
+      <div class="sb-centro">
+        <span id="sb-titulo"></span>
+        <span id="sb-turno"></span>
+        <span id="sb-acoes"></span>
+      </div>
+      <div class="sb-lado meu">
+        <div class="sb-lp-box dir">
+          <span class="sb-lp-nome" id="sb-nome-jog">Você</span>
+          <span class="sb-lp">❤ <b id="sb-lp-jog">100</b> LP</span>
+          <div class="hp-bar" id="sb-lpbar-jog-w"><div class="hp-fill"></div></div>
+          <span class="sb-mao-info">📚 baralho <b id="sb-deck-jog-n">0</b></span>
+        </div>
+        <div class="avatar avatar-jogador" id="sb-avatar-jog">🧑</div>
+        <button class="btn btn-mini sair" id="btn-sb-sair">✕ Sair</button>
+      </div>
+    </header>
+
+    <div class="sb-campo-rot">campo do oponente</div>
+    <div id="sb-campo-cpu" class="sb-campo"></div>
+
+    <div id="sb-mensagem">
+      <span id="sb-msg-txt"></span>
+      <button class="btn btn-super" id="sb-btn-direto" hidden>❤️ Atacar direto!</button>
+    </div>
+
+    <div id="sb-campo-jog" class="sb-campo"></div>
+    <div class="sb-campo-rot">seu campo (até 5)</div>
+
+    <div id="sb-controles">
+      <button class="btn" id="btn-sb-comprar">🃏 Comprar</button>
+      <button class="btn btn-prox" id="btn-sb-encerrar">Encerrar turno ▶</button>
+    </div>
+
+    <div id="sb-mao" class="sb-mao"></div>
+
+    <!-- painel de colocação -->
+    <div id="sb-colocar" hidden>
+      <span id="sb-colocar-nome"></span>
+      <div class="sb-opcoes">
+        <button class="btn sb-opcao" data-modo="ataque" data-cima="0">⚔️ Ataque (p/ baixo)</button>
+        <button class="btn sb-opcao" data-modo="ataque" data-cima="1">⚔️⬆ Ataque (p/ cima, +10% atk)</button>
+        <button class="btn sb-opcao" data-modo="defesa" data-cima="0">🛡️ Defesa (p/ baixo)</button>
+        <button class="btn sb-opcao" data-modo="defesa" data-cima="1">🛡️⬆ Defesa (p/ cima, +20% def)</button>
+      </div>
+      <button class="btn btn-sec" id="sb-colocar-cancelar">Cancelar</button>
+    </div>
+
+    <div id="sb-log-box"><div class="log-titulo">📜 Duelo</div><div id="sb-log"></div></div>
+  </section>
+
   <!-- ===== MODAL DE REGRAS ===== -->
   <div id="modal-regras" class="modal" hidden>
     <div class="modal-box">
@@ -334,5 +401,6 @@
 <script src="js/dados.js"></script>
 <script src="js/som.js"></script>
 <script src="js/jogo.js"></script>
+<script src="js/superbatalha.js"></script>
 </body>
 </html>
