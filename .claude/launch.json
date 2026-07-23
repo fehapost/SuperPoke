@@ -12,6 +12,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": [".claude/serve-cartas.js"],
       "port": 8760
+    },
+    {
+      "name": "quebec",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/serve-quebec.js"],
+      "port": 8770
     }
   ]
 }

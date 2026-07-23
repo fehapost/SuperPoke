@@ -139,7 +139,7 @@
 
     <div class="loja-vida">
       <span class="loja-vida-info">❤️ Vida máxima (Campanha Vida): <b id="loja-vidamax">50</b></span>
-      <button class="btn btn-vida" id="btn-comprar-vida">+25 de vida · 💰 <b id="loja-vida-custo">100</b></button>
+      <button class="btn btn-vida" id="btn-comprar-vida">+10 de vida · 💰 <b id="loja-vida-custo">40</b></button>
     </div>
 
     <!-- Loja de cartas avulsas (só depois de zerar a campanha) -->
@@ -227,7 +227,7 @@
     <header class="sub-header fixo">
       <div class="sub-header-linha">
         <h2>🎴 Monte seu time</h2>
-        <span class="chip">Selecionadas: <b id="sel-contagem">0</b>/5</span>
+        <span class="chip">Selecionadas: <b id="sel-contagem">0</b> (3 a 5)</span>
         <button class="btn btn-grande" id="btn-sel-confirmar" disabled>Batalhar ▶</button>
         <button class="btn btn-sec" id="btn-sel-voltar">Voltar</button>
       </div>
@@ -240,7 +240,7 @@
       </div>
     </header>
     <p class="sub-desc" id="sel-recompensa"></p>
-    <p class="sub-desc">Escolha até <b>5 cartas</b> do seu baralho para levar ao desafio. Clique nas cartas para selecionar.</p>
+    <p class="sub-desc">Escolha de <b>3 a 5 cartas</b> do seu baralho para levar ao desafio. Clique nas cartas para selecionar.</p>
     <div id="sel-grid"></div>
   </section>
 
@@ -276,13 +276,13 @@
     <div class="modal-box">
       <h2>📖 Como jogar</h2>
       <ul class="regras-lista">
-        <li><b>Objetivo:</b> eliminar todas as cartas do oponente. Você perde se ficar sem cartas.</li>
+        <li><b>Time:</b> monte um baralho de <b>3 a 5 cartas</b> (mínimo 3, em todos os modos).</li>
         <li><b>Cada rodada:</b> quem tem a vez escolhe um dos 6 atributos (Vida, Força, Ataque, Defesa, Agilidade, Inteligência). Compara-se o mesmo atributo das duas cartas do topo.</li>
-        <li><b>Maior valor vence.</b> A carta <b>derrotada sai do jogo</b> (é eliminada). A carta vencedora volta para o fundo do seu baralho.</li>
-        <li><b>Quem vence a rodada</b> escolhe o atributo da rodada seguinte.</li>
-        <li><b>Empate:</b> ninguém é eliminado — as duas cartas voltam para o fundo dos baralhos.</li>
+        <li><b>Campanha (cartas):</b> a carta <b>derrotada sai do jogo</b>; vence quem eliminar todas do oponente. Quem vence a rodada escolhe a próxima.</li>
+        <li><b>Campanha Vida:</b> ninguém é eliminado — o perdedor da rodada perde <b>pontos de vida</b> iguais à diferença do atributo. Aqui os <b>turnos alternam</b> (um seu, um da máquina) e vence quem zerar a vida do outro.</li>
+        <li><b>Empate:</b> ninguém perde nada; 3 empates seguidos ou 50 rodadas encerram empatado.</li>
         <li><b>Turno do oponente:</b> ele mostra o atributo escolhido antes de comparar. Todas as telas têm um <b>timer de 5 segundos</b> que avança sozinho.</li>
-        <li><b>Recompensa:</b> vencer batalhas rende <b>ouro</b> (perder também dá 10 de consolação). Cartas novas só se conseguem <b>comprando pacotes na Loja</b>.</li>
+        <li><b>Recompensa:</b> vencer batalhas rende <b>ouro</b> (perder dá 10 de consolação). Cartas novas só se conseguem <b>comprando pacotes na Loja</b>.</li>
       </ul>
       <button class="btn btn-grande" id="btn-regras-fechar">Entendi!</button>
     </div>

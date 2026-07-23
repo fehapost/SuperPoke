@@ -142,12 +142,12 @@ const NIVEIS_VIDA = [
   {n:20, nome:"AVATAR SUPREMO",     raridades:["Lendário","Lendário Supremo","Mítico"]},
 ];
 const MAX_NIVEL_VIDA = NIVEIS_VIDA.length;
-// Pontos de vida do oponente por nível (cresce com a fase)
-function vidaOponente(nivel){ return 50 + (nivel-1)*15; }
+// Vida do oponente por nível: 40, 60, 85, 115, 150... (incremento sobe +5 a cada fase)
+function vidaOponente(nivel){ const d = nivel - 1; return 40 + 15*d + 5*(d*(d+1)/2); }
 function ouroBaseNivelVida(nivel){ return 30 + nivel*18; }
 const VIDA_INICIAL = 50;
-const VIDA_INCREMENTO = 25;
-function custoVida(){ return progresso.vidaMax * 2; }   // preço para comprar +25 de vida
+const VIDA_INCREMENTO = 10;                                  // compra de vida de 10 em 10
+function custoVida(){ return Math.round(progresso.vidaMax * 0.8); }   // preço para +10 de vida
 
 let progresso = carregarProgresso();
 
@@ -242,6 +242,7 @@ const htmlCartaMisterio = () => `<div class="carta carta-misterio"><span class="
    =================================================================== */
 const MAX_RODADAS = 50;        // limite de rodadas -> empate
 const MAX_EMPATES_SEGUIDOS = 3; // empates seguidos -> empate
+const MIN_CARTAS = 3;          // regra geral: mínimo de 3 cartas no time
 
 const estado = {
   jogador:[], cpu:[], rodada:0, eliminadas:0,
@@ -389,7 +390,7 @@ function renderSelecao(){
 function atualizarStatsSelecao(){
   const v = progresso.vitorias||0, d = progresso.derrotas||0, part = v+d;
   $("#sel-contagem").textContent = _selecionadas.size;
-  $("#btn-sel-confirmar").disabled = _selecionadas.size < 1;
+  $("#btn-sel-confirmar").disabled = _selecionadas.size < MIN_CARTAS;
   $("#sel-pontos").textContent = progresso.pontos;
   $("#sel-vit").textContent = v;
   $("#sel-der").textContent = d;
@@ -432,7 +433,7 @@ function toggleSelecao(id, el){
 }
 function confirmarSelecao(){
   const deck = [..._selecionadas].map(cartaPorId).filter(Boolean);
-  if(!deck.length) return;
+  if(deck.length < MIN_CARTAS){ Som.play("erro"); return; }
   if(_pendingModo === "vida") iniciarNivelVida(_pendingNivel, deck);
   else iniciarNivel(_pendingNivel, deck);
 }
@@ -644,6 +645,7 @@ function resolverRodada(venc, meu, seu, attr, vMeu, vSeu){
   let msg, cls;
 
   // ===== MODO VIDA: dano = diferença do atributo; cartas voltam ao fundo (não eliminam) =====
+  // Turnos ALTERNAM sempre (um do jogador, um da máquina), independente de quem venceu.
   if(estado.modoVida){
     estado.jogador.push(meu);
     estado.cpu.push(seu);
@@ -652,22 +654,22 @@ function resolverRodada(venc, meu, seu, attr, vMeu, vSeu){
       estado.hpCpu = Math.max(0, estado.hpCpu - dano);
       estado.empatesSeguidos = 0;
       msg = `✔ ${meu.nome} venceu em ${attr.nome} (${vMeu}×${vSeu}) — oponente perde ${dano} de vida!`;
-      cls = "log-vitoria"; $("#vs-texto").textContent = "◀"; estado.turnoDe = "jogador";
+      cls = "log-vitoria"; $("#vs-texto").textContent = "◀";
       if(jc) jc.classList.add("efeito-vitoria"); if(cc) cc.classList.add("efeito-derrota");
       efeitoTela("vitoria"); Som.play("vencerRodada");
     } else if(venc === "cpu"){
       estado.hpJogador = Math.max(0, estado.hpJogador - dano);
       estado.empatesSeguidos = 0;
       msg = `✘ ${seu.nome} venceu em ${attr.nome} (${vSeu}×${vMeu}) — você perde ${dano} de vida!`;
-      cls = "log-derrota"; $("#vs-texto").textContent = "▶"; estado.turnoDe = "cpu";
+      cls = "log-derrota"; $("#vs-texto").textContent = "▶";
       if(jc) jc.classList.add("efeito-derrota"); if(cc) cc.classList.add("efeito-vitoria");
       efeitoTela("derrota"); Som.play("perderRodada");
     } else {
       estado.empatesSeguidos++;
       msg = `= Empate em ${attr.nome} (${vMeu}) — ninguém perde vida (${estado.empatesSeguidos}/${MAX_EMPATES_SEGUIDOS})`;
       cls = "log-empate"; $("#vs-texto").textContent = "="; efeitoTela("empate"); Som.play("empate");
-      estado.turnoDe = estado.turnoDe === "jogador" ? "cpu" : "jogador";
     }
+    estado.turnoDe = estado.turnoDe === "jogador" ? "cpu" : "jogador";   // sempre alterna
     addLog(msg, cls);
     atualizarPlacar();
     agendarProxima(SEGUNDOS_TIMER);
@@ -1042,7 +1044,7 @@ function comprarVida(){
   const custo = custoVida();
   if(progresso.pontos < custo){
     Som.play("erro");
-    flashLoja(`Ouro insuficiente para +25 de vida — faltam ${custo - progresso.pontos} pts`, true);
+    flashLoja(`Ouro insuficiente para +${VIDA_INCREMENTO} de vida — faltam ${custo - progresso.pontos} pts`, true);
     return;
   }
   progresso.pontos -= custo;
