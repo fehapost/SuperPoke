@@ -48,7 +48,8 @@ const NIVEIS_SUPER = [
   {n:10, nome:"REI DOS DUELOS",raridades:["Lendário","Lendário Supremo","Mítico"], lp:340}
 ];
 const MAX_NIVEL_SUPER = NIVEIS_SUPER.length;
-function ouroNivelSuper(nivel){ return 40 + nivel*22; }
+// ouro do Championship = TRIPLO do ouro das campanhas comuns
+function ouroNivelSuper(nivel){ return 3 * (40 + nivel*22); }
 const SB_LP_INICIAL = 100, SB_LP_INCREMENTO = 20;
 function custoLPSuper(){ return Math.round((progresso.lpSuper||100) * 0.8); }
 
@@ -59,13 +60,17 @@ const sb = {
   campoJog:[], campoCpu:[], selecao:null, travado:false, fim:false, avatarOp:"🃏"
 };
 
-function sbEfAtk(s){ return Math.max(1, Math.round(s.carta.ataque * (s.cima?1.1:1))); }
-function sbEfDef(s){ return Math.max(0, Math.round(s.carta.defesa * (s.cima?1.2:1))); }
+// ataque é constante (nunca debita); defesa e vida debitam durante o duelo
+function sbEfAtk(s){ return Math.max(1, s.ataque); }
+function sbEfDef(s){ return Math.max(0, s.defesa); }
 function sbNovoSlot(carta, modo, cima){
-  // vida = pontos de vida da carta (pool). Defesa é redutor de dano.
   const s = {carta, modo, cima:!!cima, jaAtacou:false, revelada:false, focoAtk:false, focoDef:false};
-  s.vida = carta.vida;
-  s.vidaMax = carta.vida;
+  // bônus de "virada p/ cima": +10% ataque (modo ataque) ou +20% defesa (modo defesa)
+  s.ataque   = Math.max(1, Math.round(carta.ataque  * (cima && modo==="ataque" ? 1.1 : 1)));
+  s.defesaMax = Math.max(0, Math.round(carta.defesa * (cima && modo==="defesa" ? 1.2 : 1)));
+  s.defesa   = s.defesaMax;   // defesa é um escudo que vai sendo consumido
+  s.vida     = carta.vida;
+  s.vidaMax  = carta.vida;
   return s;
 }
 // limites de posições: até 3 em ataque, até 2 em defesa
@@ -189,15 +194,78 @@ function sbColocar(idx, modo, cima){
   sbLog(`Você colocou ${carta.nome} em ${modo === "ataque" ? "ATAQUE" : "DEFESA"} (${cima ? "virada p/ cima" : "virada p/ baixo"}).`);
   sbGastarAcao();
 }
-// clique numa carta do campo do jogador -> se for ataque e não atacou, inicia alvo
+// clique numa carta do campo do jogador -> abre menu (atacar / descartar / sacrificar)
 function sbClicarCampoJog(slot){
-  if(sb.travado || sb.turnoDe !== "jogador" || sb.acoes <= 0) return;
-  if(!slot) return;
-  if(slot.modo !== "ataque"){ sbMsg("Só cartas em ATAQUE podem atacar."); return; }
-  if(slot.jaAtacou){ sbMsg("Essa carta já atacou neste turno."); return; }
-  sb.selecao = {tipo:"atacar", atacante:slot};
-  sbMsg("Escolha o alvo: uma carta do oponente ou ataque direto.");
+  if(sb.travado || sb.turnoDe !== "jogador" || !slot) return;
+  // escolhendo alvo do sacrifício: fortalece a carta clicada
+  if(sb.selecao && sb.selecao.tipo === "sacrificar"){
+    sbAplicarSacrificio(sb.selecao.sacrificado, slot);
+    return;
+  }
+  // já atacando: clique em outra carta de ataque troca o atacante
+  if(sb.selecao && sb.selecao.tipo === "atacar"){
+    if(slot.modo === "ataque" && !slot.jaAtacou){ sb.selecao.atacante = slot; sbDesenhar(); }
+    return;
+  }
+  if(sb.acoes <= 0){ sbMsg("Sem ações restantes neste turno."); return; }
+  sbAbrirModalAcao(slot);
+}
+/* ---------- Menu da carta no campo: atacar / descartar / sacrificar ---------- */
+function sbAbrirModalAcao(slot){
+  sb.selecao = {tipo:"acao", slot};
+  const p = slot.carta, c1 = corTipo(p.tipo1), c2 = corTipo(p.tipo2 || p.tipo1);
+  $("#modal-acao-carta").innerHTML =
+    `<div class="sb-info-carta grande" style="--c1:${c1};--c2:${c2}">
+       <img src="${SPRITE(p.id)}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(p.id)}'">
+       <div class="sb-info-nome">${p.nome}</div>
+       <div class="sb-info-tipo">${slot.modo==="ataque"?"⚔️ Ataque":"🛡️ Defesa"}</div>
+       <div class="sb-info-stats"><span>⚔️ ${slot.ataque}</span><span>🛡️ ${slot.defesa}</span><span>❤ ${slot.vida}</span></div>
+     </div>`;
+  const podeAtacar = slot.modo==="ataque" && !slot.jaAtacou;
+  const outras = sb.campoJog.filter(s=>s!==slot).length > 0;
+  const bAtk = $("#acao-atacar"); if(bAtk){ bAtk.disabled = !podeAtacar; bAtk.hidden = slot.modo!=="ataque"; }
+  const bSac = $("#acao-sacrificar"); if(bSac) bSac.disabled = !outras;
+  $("#modal-sb-acao").hidden = false;
+}
+function sbFecharModalAcao(){ const m = $("#modal-sb-acao"); if(m) m.hidden = true; if(sb.selecao && sb.selecao.tipo==="acao") sb.selecao = null; }
+function sbAcaoEscolhida(acao){
+  if(!sb.selecao || sb.selecao.tipo!=="acao") return;
+  const slot = sb.selecao.slot;
+  if(acao === "atacar"){
+    if(slot.modo!=="ataque" || slot.jaAtacou) return;
+    $("#modal-sb-acao").hidden = true;
+    sb.selecao = {tipo:"atacar", atacante:slot};
+    sbMsg("Escolha o alvo: uma carta do oponente ou ataque direto.");
+    sbDesenhar();
+  } else if(acao === "descartar"){
+    const i = sb.campoJog.indexOf(slot); if(i>=0) sb.campoJog.splice(i,1);
+    $("#modal-sb-acao").hidden = true; sb.selecao = null;
+    Som.play("erro");
+    sbLog(`Você descartou ${slot.carta.nome}.`);
+    sbGastarAcao();
+  } else if(acao === "sacrificar"){
+    if(sb.campoJog.filter(s=>s!==slot).length === 0){ sbMsg("Não há outra carta para fortalecer."); return; }
+    const i = sb.campoJog.indexOf(slot); if(i>=0) sb.campoJog.splice(i,1);   // remove o sacrificado
+    $("#modal-sb-acao").hidden = true;
+    sb.selecao = {tipo:"sacrificar", sacrificado:slot};
+    sbMsg("🔥 Sacrifício: clique numa carta sua para fortalecê-la (+20%).");
+    sbDesenhar();
+  }
+}
+// aplica +20% do atributo do sacrificado no atributo em que o alvo está posicionado
+function sbAplicarSacrificio(sacr, alvo){
+  if(!alvo || alvo === sacr) return;
+  const ehAtk = alvo.modo === "ataque";
+  const base = ehAtk ? sacr.ataque : sacr.defesaMax;
+  const boost = Math.max(1, Math.round(base * 0.2));
+  if(ehAtk){ alvo.ataque += boost; }
+  else { alvo.defesa += boost; alvo.defesaMax += boost; }
+  alvo.focoAtk = ehAtk; alvo.focoDef = !ehAtk;
+  sb.selecao = null;
+  Som.play("vencerRodada");
+  sbLog(`🔥 ${sacr.carta.nome} sacrificado: +${boost} de ${ehAtk?"ataque":"defesa"} em ${alvo.carta.nome}.`);
   sbDesenhar();
+  setTimeout(()=>{ alvo.focoAtk = false; alvo.focoDef = false; sbGastarAcao(); }, 1000);
 }
 // clique num alvo do oponente
 function sbClicarCampoCpu(slot){
@@ -237,7 +305,8 @@ function sbRolarNumero(el, de, para, ms){
   requestAnimationFrame(passo);
 }
 
-// ataque a uma carta (dano = elemento×ataque − defesa → subtrai da VIDA; excedente vai ao LP)
+// ataque a uma carta: elemento×ataque atinge a DEFESA (que é consumida);
+// o que exceder a defesa debita da VIDA; o que exceder a vida vai ao LP.
 function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
   sb.travado = true;
   const eraVirada = !alvoSlot.cima && !alvoSlot.revelada;
@@ -248,11 +317,13 @@ function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
   const mult = sbEfetividade(atkSlot.carta.tipo1, alvoSlot.carta.tipo1);
   const atkVal = sbEfAtk(atkSlot);
   const elemental = Math.round(atkVal * mult);
-  const def = sbEfDef(alvoSlot);
-  const dano = Math.max(0, elemental - def);
+  const defAntes = alvoSlot.defesa;
   const vidaAntes = alvoSlot.vida;
-  const destrui = dano >= vidaAntes;
-  const overflow = destrui ? (dano - vidaAntes) : 0;
+  // a defesa absorve primeiro; só o que passar dela machuca a vida
+  const novaDef = Math.max(0, defAntes - elemental);
+  const danoVida = Math.max(0, elemental - defAntes);
+  const destrui = danoVida >= vidaAntes && danoVida > 0;
+  const overflow = destrui ? (danoVida - vidaAntes) : 0;
 
   // abre o pop-up de combate com as duas cartas grandes
   $("#combate-atk").innerHTML = sbHtmlCarta(atkSlot, true);
@@ -273,16 +344,23 @@ function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
     sbFormula(`<span class="cb-giro"><b id="cb-roll">${atkVal}</b> ${sbElemIcon(atkSlot.carta.tipo1)}</span>`);
     sbRolarNumero($("#cb-roll"), atkVal, elemental, 700);
   }, t+1400);
-  // beat 3: − defesa = dano; aplica na vida do alvo
+  // beat 3: aplica na defesa; excedente na vida
   setTimeout(()=>{
-    sbFormula(`<span class="cb-num">${elemental}</span> <span class="cb-x">−</span> <span class="cb-def">${def} def</span> = <b class="cb-dano">${dano}</b>`);
-    alvoSlot.vida = Math.max(0, vidaAntes - dano);
+    if(danoVida > 0){
+      sbFormula(`<span class="cb-num">${elemental}</span> <span class="cb-x">−</span> <span class="cb-def">🛡️${defAntes}</span> = <b class="cb-dano">${danoVida}</b> ❤`);
+    } else {
+      sbFormula(`🛡️ <span class="cb-def">${defAntes} → ${novaDef}</span> <span class="cb-x">(a defesa aguentou)</span>`);
+    }
+    alvoSlot.defesa = novaDef;
+    alvoSlot.vida = Math.max(0, vidaAntes - danoVida);
+    alvoSlot.focoDef = true; alvoSlot.focoAtk = false;   // destaca defesa/vida atingidas
     $("#combate-alvo").innerHTML = sbHtmlCarta(alvoSlot, true);
     const el = $("#combate-alvo .sbcard"); if(el) el.classList.add("tremendo");
-    Som.play(dano>0 ? "vencerRodada" : "erro");
+    Som.play(danoVida>0 ? "vencerRodada" : "erro");
   }, t+2900);
   // beat 4: destruição + excedente no LP
   setTimeout(()=>{
+    alvoSlot.focoDef = false;
     if(destrui){
       const el = $("#combate-alvo .sbcard"); if(el){ el.classList.add("destruida"); }
       const i = campoAlvo.indexOf(alvoSlot); if(i>=0) campoAlvo.splice(i,1);
@@ -298,7 +376,7 @@ function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
         }, 1200);
       } else setTimeout(sbCombateFechar, 1300);
     } else {
-      sbLog(`${atkSlot.carta.nome} atacou ${alvoSlot.carta.nome} — vida ${alvoSlot.vida}/${alvoSlot.vidaMax}.`);
+      sbLog(`${atkSlot.carta.nome} atacou ${alvoSlot.carta.nome} — 🛡️${alvoSlot.defesa} ❤${alvoSlot.vida}/${alvoSlot.vidaMax}.`);
       setTimeout(sbCombateFechar, 1300);
     }
   }, t+4300);
@@ -496,9 +574,11 @@ function sbRenderCampo(containerId, cards, meu, atacando){
 function sbSlotEl(slot, meu, atacando, tipoSlot){
   const div = document.createElement("div");
   const podeAtacar = meu && slot && slot.modo==="ataque" && !slot.jaAtacou && sb.turnoDe==="jogador" && sb.acoes>0 && !sb.travado;
+  const sacrificando = sb.selecao && sb.selecao.tipo==="sacrificar";
   div.className = "sb-slot slot-" + tipoSlot + (slot ? "" : " vazio") +
     (!meu && atacando && slot ? " alvo" : "") +
-    (podeAtacar ? " pode-atacar" : "") +
+    (podeAtacar && !sacrificando ? " pode-atacar" : "") +
+    (meu && slot && sacrificando ? " pode-fortalecer" : "") +
     (atacando && sb.selecao.atacante === slot ? " selecionado" : "");
   div.innerHTML = slot ? sbHtmlCarta(slot, meu) : "";
   if(slot){
@@ -622,6 +702,12 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const bl = $("#btn-comprar-lp"); if(bl) bl.addEventListener("click", comprarLPSuper);
   const bcancel = $("#sb-colocar-cancelar"); if(bcancel) bcancel.addEventListener("click", sbFecharModalColocar);
   const bok = $("#sb-fim-pop-ok"); if(bok) bok.addEventListener("click", ()=>{ const p=$("#sb-fim-pop"); if(p) p.hidden=true; sbFim(sb.lpCpu <= 0); });
+  // menu da carta no campo (atacar / descartar / sacrificar)
+  const bAcCancel = $("#sb-acao-cancelar"); if(bAcCancel) bAcCancel.addEventListener("click", sbFecharModalAcao);
+  const mAcao = $("#modal-sb-acao"); if(mAcao) mAcao.addEventListener("click", e=>{ if(e.target.id==="modal-sb-acao") sbFecharModalAcao(); });
+  document.querySelectorAll("#modal-sb-acao .sb-opcao").forEach(op=>op.addEventListener("click", ()=>{
+    if(!op.disabled) sbAcaoEscolhida(op.dataset.acao);
+  }));
   const mc = $("#modal-sb-colocar"); if(mc) mc.addEventListener("click", e=>{ if(e.target.id==="modal-sb-colocar") sbFecharModalColocar(); });
   // opções de colocação (no modal)
   document.querySelectorAll("#modal-sb-colocar .sb-opcao").forEach(op=>op.addEventListener("click", ()=>{

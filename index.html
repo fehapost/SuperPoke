@@ -355,6 +355,22 @@
     </div>
   </div>
 
+  <!-- ===== POP-UP DE AÇÃO DA CARTA NO CAMPO (atacar / descartar / sacrificar) ===== -->
+  <div id="modal-sb-acao" class="modal" hidden>
+    <div class="modal-box modal-colocar-box">
+      <div id="modal-acao-carta"></div>
+      <div class="modal-colocar-opcoes">
+        <div class="sb-colocar-tit">O que fazer com esta carta?</div>
+        <div class="sb-opcoes">
+          <button class="btn sb-opcao" id="acao-atacar" data-acao="atacar">⚔️ Atacar</button>
+          <button class="btn sb-opcao" id="acao-descartar" data-acao="descartar">🗑️ Descartar</button>
+          <button class="btn sb-opcao" id="acao-sacrificar" data-acao="sacrificar">🔥 Sacrificar (+20%)</button>
+        </div>
+        <button class="btn btn-sec" id="sb-acao-cancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== POP-UP DE FIM DE DUELO (você venceu / perdeu) ===== -->
   <div id="sb-fim-pop" class="modal" hidden>
     <div class="modal-box sb-fim-pop-box">
