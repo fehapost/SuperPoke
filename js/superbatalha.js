@@ -120,14 +120,30 @@ function iniciarSuperNivel(nivel){
 }
 
 /* ---------- Controle de turno ---------- */
+let _sbTurnoTimer = null, _sbTurnoRestante = 60;
+function sbLimparTurnoTimer(){ clearInterval(_sbTurnoTimer); _sbTurnoTimer = null; }
 function sbIniciarTurno(quem){
+  sbLimparTurnoTimer();
   sb.turnoDe = quem;
   sb.acoes = 3;
   sb.selecao = null;
   sb.travado = quem === "cpu";
   (quem === "jogador" ? sb.campoJog : sb.campoCpu).forEach(s=>s.jaAtacou = false);
   sbDesenhar();
-  if(quem === "cpu") setTimeout(sbPassoCPU, 800);
+  if(quem === "cpu"){ setTimeout(sbPassoCPU, 800); return; }
+  // jogador: 60s por turno, senão perde a vez
+  _sbTurnoRestante = 60;
+  const el = $("#sb-timer");
+  const tick = ()=>{ if(el) el.textContent = `⏱ ${_sbTurnoRestante}s`; };
+  tick();
+  _sbTurnoTimer = setInterval(()=>{
+    _sbTurnoRestante--;
+    tick();
+    if(_sbTurnoRestante <= 0){
+      sbLimparTurnoTimer();
+      if(!sb.fim && sb.turnoDe === "jogador"){ sbLog("⏱ Tempo esgotado — você perdeu a vez!"); sbEncerrarTurno(); }
+    }
+  }, 1000);
 }
 function sbGastarAcao(){
   sb.acoes--;
@@ -211,9 +227,11 @@ function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
     const i = campoAlvo.indexOf(alvoSlot);
     if(i >= 0) campoAlvo.splice(i, 1);
     txt += ` ${alvoSlot.carta.nome} foi destruída!`;
+    sbBanner(`${atkSlot.carta.nome} derrotou ${alvoSlot.carta.nome}! (-${dano})`, "bom");
     Som.play("vencerRodada");
   } else {
     txt += ` Restam ${alvoSlot.def} de defesa.`;
+    sbBanner(`${atkSlot.carta.nome} atacou ${alvoSlot.carta.nome} (-${dano} def)`, "neutro");
     Som.play("atributo");
   }
   sbLog(txt);
@@ -227,10 +245,20 @@ function sbExecAtaqueDireto(atkSlot, ladoAlvo){
   if(ladoAlvo === "cpu"){ sb.lpCpu = Math.max(0, sb.lpCpu - dano); }
   else { sb.lpJog = Math.max(0, sb.lpJog - dano); }
   sbLog(`⚔️ ATAQUE DIRETO! ${atkSlot.carta.nome} causou ${dano} de dano aos pontos de vida.`);
+  sbBanner(`⚔️ ${atkSlot.carta.nome} atacou direto! (-${dano} LP)`, ladoAlvo==="cpu"?"bom":"ruim");
   Som.play("perderRodada");
   efeitoTela(ladoAlvo === "cpu" ? "vitoria" : "derrota");
   sb.selecao = null;
   sbPosAtaque();
+}
+// banner grande na tela mostrando o que aconteceu
+function sbBanner(txt, tipo){
+  const b = $("#sb-banner");
+  if(!b) return;
+  b.textContent = txt;
+  b.className = "mostra " + (tipo || "neutro");
+  clearTimeout(sbBanner._t);
+  sbBanner._t = setTimeout(()=>{ b.className = ""; }, 2200);
 }
 function sbPosAtaque(){
   if(sb.lpCpu <= 0 || sb.lpJog <= 0){ sbDesenhar(); return sbFim(sb.lpCpu <= 0); }
@@ -246,15 +274,16 @@ function sbPassoCPU(){
   const atacantes = campo.filter(s=>s.modo==="ataque" && !s.jaAtacou);
   const defensores = campo.filter(s=>s.modo==="defesa");
 
-  // 1) atacar se tiver atacante
+  // 1) atacar se tiver atacante (escolhe o atacante com variedade)
   if(atacantes.length){
-    const atk = atacantes[0];
+    const atkOrd = atacantes.slice().sort((a,b)=>sbEfAtk(b)-sbEfAtk(a));
+    const atk = escolhaComErro(atkOrd);
     const defsJog = sb.campoJog.filter(s=>s.modo==="defesa");
     if(defsJog.length){
-      defsJog.sort((a,b)=>a.def-b.def);
-      sbExecAtaqueCarta(atk, defsJog[0], sb.campoJog, "jogador");
-    } else if(sb.campoJog.length && Math.random()<0.4){
-      // às vezes remove um atacante do jogador
+      // alvo entre defensores, com variedade (melhor = defesa mais fraca)
+      const alvoOrd = defsJog.slice().sort((a,b)=>a.def-b.def);
+      sbExecAtaqueCarta(atk, escolhaComErro(alvoOrd), sb.campoJog, "jogador");
+    } else if(sb.campoJog.length && Math.random()<0.3){
       const alvo = sb.campoJog[Math.floor(Math.random()*sb.campoJog.length)];
       sbExecAtaqueCarta(atk, alvo, sb.campoJog, "jogador");
     } else {
@@ -263,15 +292,12 @@ function sbPassoCPU(){
     sb.acoes--;
     return void setTimeout(sbPassoCPU, 900);
   }
-  // 2) colocar carta se tiver espaço e mão
+  // 2) colocar carta se tiver espaço e mão (escolhe a carta com variedade)
   if(campo.length < 5 && mao.length){
-    // escolhe melhor carta e modo
-    let melhor = 0, melhorScore = -1, melhorModo = "defesa";
-    mao.forEach((c,i)=>{
-      const sc = Math.max(c.ataque, c.defesa);
-      if(sc > melhorScore){ melhorScore = sc; melhor = i; melhorModo = c.ataque >= c.defesa ? "ataque" : "defesa"; }
-    });
-    // se não tem defensor, prioriza defesa
+    const ordem = mao.map((c,i)=>({i, sc:Math.max(c.ataque,c.defesa)})).sort((a,b)=>b.sc-a.sc);
+    const escolha = escolhaComErro(ordem);
+    const melhor = escolha.i;
+    let melhorModo = mao[melhor].ataque >= mao[melhor].defesa ? "ataque" : "defesa";
     if(defensores.length === 0 && mao[melhor].defesa >= 30) melhorModo = "defesa";
     const cima = Math.random() < 0.25;           // maioria virada p/ baixo
     const carta = mao.splice(melhor,1)[0];
@@ -297,6 +323,7 @@ function sbPassoCPU(){
 /* ---------- Fim ---------- */
 function sbFim(venceu){
   sb.fim = true; sb.travado = true;
+  sbLimparTurnoTimer();
   const info = NIVEIS_SUPER[sb.nivel-1];
   mostrarTela("tela-fim");
   const t = $("#fim-titulo"), s = $("#fim-sub"), acoes = $("#fim-acoes");
@@ -310,6 +337,7 @@ function sbFim(venceu){
     progresso.vitorias = (progresso.vitorias||0) + 1;
     if(primeiraVez && progresso.nivelSuper < MAX_NIVEL_SUPER) progresso.nivelSuper++;
     salvarProgresso();
+    var marco = premiarMarcoVitoria();
     const zerou = primeiraVez && sb.nivel === MAX_NIVEL_SUPER;
     t.textContent = zerou ? "👑 REI DOS DUELOS!" : "🏆 VITÓRIA!";
     t.classList.add("venceu");
@@ -329,6 +357,7 @@ function sbFim(venceu){
   const host = $("#fim-crono");
   host.innerHTML = htmlCrono(SEGUNDOS_TIMER);
   _fimTimer = animarCrono(host, SEGUNDOS_TIMER, ()=>{ limparTimers(); abrirCampanhaSuper(); });
+  if(venceu) mostrarMarcoNoFim(marco);
 }
 
 /* ---------- Render ---------- */
@@ -344,13 +373,21 @@ function sbHtmlCarta(s, meu){
   const visivel = meu || s.cima || s.revelada;
   if(!visivel) return `<div class="sbcard verso"><div class="sb-verso-pk"></div></div>`;
   const p = s.carta, c1 = corTipo(p.tipo1), c2 = corTipo(p.tipo2 || p.tipo1);
-  const modo = s.modo === "ataque" ? "m-atk" : "m-def";
+  const ehAtaque = s.modo === "ataque";
+  const modo = ehAtaque ? "m-atk" : "m-def deitada";   // defesa fica deitada (rotacionada)
+  // status principal grande no meio (o do modo), o outro pequeno embaixo
+  const grandeIcon = ehAtaque ? "⚔" : "🛡";
+  const grandeVal  = ehAtaque ? sbEfAtk(s) : s.def;
+  const pequenoLbl = ehAtaque ? "DEF" : "ATK";
+  const pequenoVal = ehAtaque ? s.def : sbEfAtk(s);
   return `<div class="sbcard ${modo}${s.cima?' cima':''}" style="--c1:${c1};--c2:${c2}">
-      <span class="sb-modo-tag">${s.modo==="ataque"?"⚔️":"🛡️"}${s.cima?" ⬆":""}</span>
-      <img src="${SPRITE(p.id)}" loading="lazy" alt="${p.nome}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(p.id)}'">
-      <span class="sb-nome">${p.nome}</span>
-      <span class="sb-tipo tag-tipo">${p.tipo1}</span>
-      <span class="sb-stats"><span class="sb-atk">⚔ ${sbEfAtk(s)}</span><span class="sb-def">🛡 ${s.def}</span></span>
+      <div class="sb-conteudo">
+        <span class="sb-modo-tag">${ehAtaque?"⚔️":"🛡️"}${s.cima?" ⬆":""}</span>
+        <img src="${SPRITE(p.id)}" loading="lazy" alt="${p.nome}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(p.id)}'">
+        <span class="sb-nome">${p.nome}</span>
+        <span class="sb-stat-grande">${grandeIcon} ${grandeVal}</span>
+        <span class="sb-stat-peq">${pequenoLbl} ${pequenoVal}</span>
+      </div>
     </div>`;
 }
 
@@ -411,16 +448,32 @@ function sbDesenhar(){
     mao.appendChild(div);
   });
 
-  // controles / painéis
-  $("#btn-sb-comprar").disabled = sb.travado || sb.turnoDe!=="jogador" || sb.acoes<=0 || sb.baralhoJog.length===0;
+  // controles / baralho lateral (clica para comprar)
+  const podeComprar = !sb.travado && sb.turnoDe==="jogador" && sb.acoes>0 && sb.baralhoJog.length>0;
+  const deck = $("#sb-deck-jog");
+  if(deck){
+    deck.className = "sb-deck" + (podeComprar ? " ativo" : "") + (sb.baralhoJog.length===0 ? " vazio" : "");
+    deck.querySelector(".sb-deck-num").textContent = sb.baralhoJog.length;
+    deck.onclick = podeComprar ? sbComprar : null;
+  }
   $("#btn-sb-encerrar").disabled = sb.travado || sb.turnoDe!=="jogador";
+  const tm = $("#sb-timer"); if(tm) tm.style.visibility = (sb.turnoDe==="jogador" && !sb.fim) ? "visible" : "hidden";
 
-  // painel de colocação
+  // painel de colocação: opções à esquerda, info da carta à direita
   const pc = $("#sb-colocar");
   if(sb.selecao && sb.selecao.tipo === "colocar"){
     const carta = sb.maoJog[sb.selecao.idx];
     pc.hidden = false;
-    $("#sb-colocar-nome").textContent = carta ? `Colocar ${carta.nome} — ⚔${carta.ataque} 🛡${carta.defesa}` : "";
+    if(carta){
+      const c1 = corTipo(carta.tipo1), c2 = corTipo(carta.tipo2 || carta.tipo1);
+      $("#sb-colocar-info").innerHTML =
+        `<div class="sb-info-carta" style="--c1:${c1};--c2:${c2}">
+           <img src="${SPRITE(carta.id)}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(carta.id)}'">
+           <div class="sb-info-nome">${carta.nome}</div>
+           <div class="sb-info-tipo">${carta.tipo1}${carta.tipo2?" / "+carta.tipo2:""}</div>
+           <div class="sb-info-stats"><span>⚔️ ${carta.ataque}</span><span>🛡️ ${carta.defesa}</span></div>
+         </div>`;
+    }
   } else pc.hidden = true;
 
   // botão de ataque direto

@@ -62,9 +62,9 @@
     </p>
 
     <div class="menu-botoes">
-      <button class="btn btn-grande" id="btn-campanha">⚔️ CAMPANHA</button>
-      <button class="btn btn-grande btn-vida" id="btn-campanha-vida">❤️ CAMPANHA VIDA</button>
-      <button class="btn btn-grande btn-super" id="btn-campanha-super">🃏 SUPER BATALHA</button>
+      <button class="btn btn-grande" id="btn-campanha">⚔️ CLASSIC</button>
+      <button class="btn btn-grande btn-super" id="btn-campanha-super">🃏 CHAMPIONSHIP</button>
+      <button class="btn btn-grande btn-vida" id="btn-campanha-vida">❤️ LIFE TOURNAMENT</button>
     </div>
     <div class="menu-botoes">
       <button class="btn btn-sec" id="btn-loja">🛒 Loja</button>
@@ -292,6 +292,7 @@
         <span id="sb-titulo"></span>
         <span id="sb-turno"></span>
         <span id="sb-acoes"></span>
+        <span id="sb-timer">⏱ 60s</span>
       </div>
       <div class="sb-lado meu">
         <div class="sb-lp-box dir">
@@ -308,31 +309,41 @@
     <div class="sb-campo-rot">campo do oponente</div>
     <div id="sb-campo-cpu" class="sb-campo"></div>
 
+    <div id="sb-banner"></div>
     <div id="sb-mensagem">
       <span id="sb-msg-txt"></span>
       <button class="btn btn-super" id="sb-btn-direto" hidden>❤️ Atacar direto!</button>
     </div>
 
-    <div id="sb-campo-jog" class="sb-campo"></div>
-    <div class="sb-campo-rot">seu campo (até 5)</div>
+    <div class="sb-linha-campo">
+      <div id="sb-campo-jog" class="sb-campo"></div>
+      <div class="sb-deck" id="sb-deck-jog" title="Clique para comprar">
+        <div class="sb-deck-back"></div>
+        <span class="sb-deck-lbl">📚 Baralho</span>
+        <span class="sb-deck-num">0</span>
+      </div>
+    </div>
+    <div class="sb-campo-rot">seu campo (até 5) · clique no baralho para comprar</div>
 
     <div id="sb-controles">
-      <button class="btn" id="btn-sb-comprar">🃏 Comprar</button>
       <button class="btn btn-prox" id="btn-sb-encerrar">Encerrar turno ▶</button>
     </div>
 
     <div id="sb-mao" class="sb-mao"></div>
 
-    <!-- painel de colocação -->
+    <!-- painel de colocação: opções à ESQUERDA, informações à DIREITA -->
     <div id="sb-colocar" hidden>
-      <span id="sb-colocar-nome"></span>
-      <div class="sb-opcoes">
-        <button class="btn sb-opcao" data-modo="ataque" data-cima="0">⚔️ Ataque (p/ baixo)</button>
-        <button class="btn sb-opcao" data-modo="ataque" data-cima="1">⚔️⬆ Ataque (p/ cima, +10% atk)</button>
-        <button class="btn sb-opcao" data-modo="defesa" data-cima="0">🛡️ Defesa (p/ baixo)</button>
-        <button class="btn sb-opcao" data-modo="defesa" data-cima="1">🛡️⬆ Defesa (p/ cima, +20% def)</button>
+      <div class="sb-colocar-esq">
+        <div class="sb-colocar-tit">Como colocar?</div>
+        <div class="sb-opcoes">
+          <button class="btn sb-opcao" data-modo="ataque" data-cima="0">⚔️ Ataque (p/ baixo)</button>
+          <button class="btn sb-opcao" data-modo="ataque" data-cima="1">⚔️⬆ Ataque (p/ cima · +10% atk)</button>
+          <button class="btn sb-opcao" data-modo="defesa" data-cima="0">🛡️ Defesa (p/ baixo)</button>
+          <button class="btn sb-opcao" data-modo="defesa" data-cima="1">🛡️⬆ Defesa (p/ cima · +20% def)</button>
+        </div>
+        <button class="btn btn-sec" id="sb-colocar-cancelar">Cancelar</button>
       </div>
-      <button class="btn btn-sec" id="sb-colocar-cancelar">Cancelar</button>
+      <div class="sb-colocar-dir" id="sb-colocar-info"></div>
     </div>
 
     <div id="sb-log-box"><div class="log-titulo">📜 Duelo</div><div id="sb-log"></div></div>

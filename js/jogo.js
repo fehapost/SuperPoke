@@ -592,14 +592,26 @@ function proximaRodada(){
 const MAX_ATTR = {};
 ATRIBUTOS.forEach(a=>{ MAX_ATTR[a.chave] = Math.max(1, ...POKEMONS.map(p=>p[a.chave])); });
 
-// Oponente escolhe o atributo em que sua carta é RELATIVAMENTE mais forte
+// Variedade da IA: 75% a melhor, 15% a 2ª, 5% a 3ª, 5% aleatória.
+// Recebe uma lista já ordenada (melhor -> pior) e devolve um item dela.
+function escolhaComErro(ordenados){
+  if(!ordenados || !ordenados.length) return null;
+  if(ordenados.length === 1) return ordenados[0];
+  const r = Math.random();
+  let idx;
+  if(r < 0.75) idx = 0;
+  else if(r < 0.90) idx = 1;
+  else if(r < 0.95) idx = 2;
+  else idx = Math.floor(Math.random() * ordenados.length);
+  return ordenados[Math.min(idx, ordenados.length - 1)];
+}
+
+// Oponente escolhe o atributo — com chance de errar (variedade)
 function escolhaCPU(carta){
-  let melhor = ATRIBUTOS[0].chave, best = -1;
-  ATRIBUTOS.forEach(a=>{
-    const ratio = carta[a.chave] / MAX_ATTR[a.chave];
-    if(ratio > best){ best = ratio; melhor = a.chave; }
-  });
-  return melhor;
+  const ord = ATRIBUTOS
+    .map(a => ({ chave:a.chave, ratio: carta[a.chave] / MAX_ATTR[a.chave] }))
+    .sort((a,b) => b.ratio - a.ratio);
+  return escolhaComErro(ord).chave;
 }
 
 function jogarAtributo(chave, porOponente){
@@ -773,8 +785,10 @@ function botaoFim(cont, texto, cls, fn){
   cont.appendChild(b);
 }
 
+let _marcoPremio = null;   // prêmio de marco de vitórias a exibir no fim
 function finalizar(empate){
   limparTimers();
+  _marcoPremio = null;
   const ctx = estado.contexto || {tipo:"livre"};
   const venceu = !empate && (estado.modoVida ? estado.hpCpu <= 0 : estado.cpu.length === 0);
 
@@ -796,7 +810,7 @@ function finalizar(empate){
     s.innerHTML = `A batalha terminou empatada (${motivo}). Ninguém venceu.`;
     if(emVida){
       botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel, "vida"));
-      botaoFim(acoes, "❤️ Campanha Vida", "btn-sec", abrirCampanhaVida);
+      botaoFim(acoes, "❤️ Life Tournament", "btn-sec", abrirCampanhaVida);
     } else if(emCampanha){
       botaoFim(acoes, "↺ Tentar de novo", "btn-grande", ()=>escolherTimeParaNivel(ctx.nivel));
       botaoFim(acoes, "🗺️ Campanha", "btn-sec", abrirCampanha);
@@ -814,6 +828,7 @@ function finalizar(empate){
       progresso.vitorias = (progresso.vitorias||0) + 1;
       if(primeiraVez && progresso.nivelVida < MAX_NIVEL_VIDA) progresso.nivelVida++;
       salvarProgresso();
+      _marcoPremio = premiarMarcoVitoria();
       const zerou = primeiraVez && ctx.nivel === MAX_NIVEL_VIDA;
       t.textContent = zerou ? "👑 LENDA!" : "🏆 VITÓRIA!"; t.classList.add("venceu");
       s.innerHTML = `Você derrotou <b>${info.nome}</b> com ${estado.hpJogador} de vida restante!<br>`+
@@ -843,6 +858,7 @@ function finalizar(empate){
       const zerou = primeiraVez && ctx.nivel === MAX_NIVEL;
       if(zerou) progresso.campanhaZerada = true;   // desbloqueia a loja de cartas avulsas
       salvarProgresso();
+      _marcoPremio = premiarMarcoVitoria();
       t.textContent = zerou ? "👑 CAMPEÃO!" : "🏆 VITÓRIA!";
       t.classList.add("venceu");
       s.innerHTML = `Você derrotou <b>${info.nome}</b>!<br>`+
@@ -884,21 +900,28 @@ function finalizar(empate){
   const host = $("#fim-crono");
   host.innerHTML = htmlCrono(SEGUNDOS_TIMER);
   _fimTimer = animarCrono(host, SEGUNDOS_TIMER, ()=>{ limparTimers(); autoAvancar(); });
+
+  mostrarMarcoNoFim(_marcoPremio);
 }
 
-/* ===================================================================
-   CAMPANHA (mapa/escada)
-   =================================================================== */
+// mostra o prêmio de marco de vitórias (pausa o auto-avanço e abre o pacote)
+function mostrarMarcoNoFim(premio){
+  if(!premio) return;
+  clearInterval(_fimTimer); _fimTimer = null;   // deixa o jogador ver o prêmio sem pressa
+  Som.play("premio");
+  $("#fim-sub").innerHTML += `<br><span class="marco-vitoria">🎉 ${premio.marco} vitórias — você ganhou um ${premio.pac.nome}!</span>`;
+  mostrarAberturaPacote(premio.pac, premio.ganhos);
+}
 function abrirCampanha(){ renderCampanha("normal"); }
 function abrirCampanhaVida(){ renderCampanha("vida"); }
 function renderCampanha(modo){
   const vida = modo === "vida";
   mostrarTela("tela-campanha");
   $("#camp-pontos").textContent = progresso.pontos;
-  $("#camp-titulo").textContent = vida ? "❤️ Campanha Vida" : "⚔️ Campanha";
+  $("#camp-titulo").textContent = vida ? "❤️ Life Tournament" : "⚔️ Classic";
   $("#camp-desc").innerHTML = vida
-    ? "Duelo por <b>pontos de vida</b>: o dano é a diferença do atributo. Compre mais vida na loja!"
-    : "Derrote os oponentes em ordem — cada um é mais forte que o anterior. Cada vitória rende ouro.";
+    ? "<b>Life Tournament</b> — duelo por pontos de vida: o dano é a diferença do atributo. Compre mais vida na loja!"
+    : "<b>Classic</b> — derrote os oponentes em ordem eliminando as cartas deles. Cada vitória rende ouro.";
   const lista = vida ? NIVEIS_VIDA : NIVEIS;
   const nivelAtual = vida ? progresso.nivelVida : progresso.nivel;
   const cont = $("#campanha-lista");
@@ -1040,6 +1063,29 @@ function confetePacote(){
   }
   setTimeout(()=>{ c.innerHTML = ""; }, 3200);
 }
+// Prêmios por marcos de vitórias (pacote grátis ao atingir a marca)
+const PREMIOS_VITORIA = {5:"comum", 15:"incomum", 50:"raro", 100:"raro", 150:"lendario", 500:"lendario", 1000:"mitico"};
+// chamado ao vencer (após incrementar vitorias); devolve descrição do prêmio ou null
+function premiarMarcoVitoria(){
+  const packId = PREMIOS_VITORIA[progresso.vitorias];
+  if(!packId) return null;
+  const pac = PACOTES.find(p=>p.id===packId);
+  if(!pac) return null;
+  const ganhos = [];
+  for(let i=0;i<2;i++){
+    let rar = sortearRaridade(pac.dist);
+    let pool = POKEMONS.filter(p=>p.raridade===rar);
+    if(!pool.length) pool = POKEMONS.filter(p=>p.raridade==="Comum");
+    if(!pool.length) pool = POKEMONS;
+    const p = pool[Math.floor(Math.random()*pool.length)];
+    const jaTinha = progresso.owned.includes(p.id);
+    progresso.owned.push(p.id);
+    ganhos.push({id:p.id, repetida:jaTinha});
+  }
+  salvarProgresso();
+  return {pac, ganhos, marco: progresso.vitorias};
+}
+
 function atualizarLojaVida(){
   $("#loja-vidamax").textContent = progresso.vidaMax;
   $("#loja-vida-custo").textContent = custoVida();
