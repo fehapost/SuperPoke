@@ -199,6 +199,9 @@
       </div>
     </header>
 
+    <!-- barra de tempo do turno (30s) — só no seu turno -->
+    <div id="jogo-tempo-barra" hidden><div id="jogo-tempo-fill" class="sb-tempo-fill verde"></div></div>
+
     <div id="arena">
       <aside id="mao">
         <div class="mao-titulo">VOCÊ ▾</div>
@@ -218,7 +221,7 @@
     <div id="turno-aviso"></div>
 
     <div id="acoes">
-      <button class="btn btn-prox" id="btn-proxima" hidden>Próxima rodada ▶</button>
+      <button class="btn-encerrar-redondo" id="btn-proxima" title="Próxima rodada" hidden>▶</button>
     </div>
 
     <div id="log-box">
@@ -254,6 +257,7 @@
     <div id="confete"></div>
     <h1 id="fim-titulo"></h1>
     <p id="fim-sub"></p>
+    <div id="fim-marco" hidden></div>
     <div id="fim-acoes" class="menu-botoes"></div>
     <div class="fim-crono-box">
       <span id="fim-crono" class="crono-grande"></span>
@@ -294,6 +298,7 @@
         <span id="sb-acoes"></span>
         <span id="sb-timer">⏱ 60s</span>
       </div>
+      <button class="btn-encerrar-redondo" id="btn-sb-encerrar" title="Encerrar turno">▶</button>
       <div class="sb-lado meu">
         <div class="sb-lp-box dir">
           <span class="sb-lp-nome" id="sb-nome-jog">Você</span>
@@ -305,6 +310,9 @@
         <button class="btn btn-mini sair" id="btn-sb-sair">✕ Sair</button>
       </div>
     </header>
+
+    <!-- barra de tempo do turno: começa cheia (lado do oponente) e some em direção ao jogador -->
+    <div id="sb-tempo-barra"><div id="sb-tempo-fill" class="sb-tempo-fill verde"></div></div>
 
     <div class="sb-campo-rot">campo do oponente</div>
     <div id="sb-campo-cpu" class="sb-campo"></div>
@@ -323,17 +331,18 @@
         <span class="sb-deck-num">0</span>
       </div>
     </div>
-    <div class="sb-campo-rot">seu campo (até 5) · clique no baralho para comprar</div>
-
-    <div id="sb-controles">
-      <button class="btn btn-prox" id="btn-sb-encerrar">Encerrar turno ▶</button>
-    </div>
+    <div class="sb-campo-rot">seu campo · ⚔️ até 3 em pé · 🛡️ até 2 deitadas · clique no baralho para comprar</div>
 
     <div id="sb-mao" class="sb-mao"></div>
 
-    <!-- painel de colocação: opções à ESQUERDA, informações à DIREITA -->
-    <div id="sb-colocar" hidden>
-      <div class="sb-colocar-esq">
+    <div id="sb-log-box"><div class="log-titulo">📜 Duelo</div><div id="sb-log"></div></div>
+  </section>
+
+  <!-- ===== POP-UP DE COLOCAÇÃO (carta vem à frente) ===== -->
+  <div id="modal-sb-colocar" class="modal" hidden>
+    <div class="modal-box modal-colocar-box">
+      <div id="modal-colocar-carta"></div>
+      <div class="modal-colocar-opcoes">
         <div class="sb-colocar-tit">Como colocar?</div>
         <div class="sb-opcoes">
           <button class="btn sb-opcao" data-modo="ataque" data-cima="0">⚔️ Ataque (p/ baixo)</button>
@@ -343,11 +352,30 @@
         </div>
         <button class="btn btn-sec" id="sb-colocar-cancelar">Cancelar</button>
       </div>
-      <div class="sb-colocar-dir" id="sb-colocar-info"></div>
     </div>
+  </div>
 
-    <div id="sb-log-box"><div class="log-titulo">📜 Duelo</div><div id="sb-log"></div></div>
-  </section>
+  <!-- ===== POP-UP DE FIM DE DUELO (você venceu / perdeu) ===== -->
+  <div id="sb-fim-pop" class="modal" hidden>
+    <div class="modal-box sb-fim-pop-box">
+      <div id="sb-fim-pop-emoji">🏆</div>
+      <h2 id="sb-fim-pop-titulo">VOCÊ VENCEU!</h2>
+      <p id="sb-fim-pop-sub"></p>
+      <button class="btn btn-grande" id="sb-fim-pop-ok">OK</button>
+    </div>
+  </div>
+
+  <!-- ===== POP-UP DE COMBATE (animação de ataque) ===== -->
+  <div id="sb-combate" hidden>
+    <div class="combate-box">
+      <div class="combate-carta" id="combate-atk"></div>
+      <div class="combate-meio">
+        <div id="combate-formula"></div>
+        <div id="combate-coracao" hidden>❤️ <span id="combate-lp"></span></div>
+      </div>
+      <div class="combate-carta" id="combate-alvo"></div>
+    </div>
+  </div>
 
   <!-- ===== MODAL DE REGRAS ===== -->
   <div id="modal-regras" class="modal" hidden>

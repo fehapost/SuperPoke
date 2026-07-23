@@ -544,14 +544,48 @@ let _fimTimer = null;
 function limparTimers(){
   clearInterval(_tickTimer); _tickTimer = null;
   clearInterval(_fimTimer);  _fimTimer = null;
+  pararTurnoTimerJogo();
 }
 function agendarProxima(segundos){
   limparTimers();
   const b = $("#btn-proxima");
   b.hidden = false;
-  b.innerHTML = `Próxima rodada ▶ ${htmlCrono(segundos)}`;
+  b.classList.add("com-crono");                       // botão redondo ▶ com anel de contagem
+  b.innerHTML = `▶${htmlCrono(segundos)}`;
   b.onclick = ()=>{ limparTimers(); proximaRodada(); };
   _tickTimer = animarCrono(b, segundos, ()=>{ limparTimers(); proximaRodada(); });
+}
+
+/* ---------- Timer de turno (30s) nos modos Classic e Life ---------- */
+const SEGUNDOS_TURNO = 30;
+let _turnoTimer = null, _turnoRestante = 0;
+function pararTurnoTimerJogo(){
+  if(_turnoTimer){ clearInterval(_turnoTimer); _turnoTimer = null; }
+  const barra = $("#jogo-tempo-barra"); if(barra) barra.hidden = true;
+}
+function iniciarTurnoTimerJogo(){
+  pararTurnoTimerJogo();
+  const barra = $("#jogo-tempo-barra"), fill = $("#jogo-tempo-fill");
+  if(!barra || !fill) return;
+  barra.hidden = false;
+  _turnoRestante = SEGUNDOS_TURNO;
+  fill.style.transition = "none";
+  fill.style.width = "100%";
+  fill.className = "sb-tempo-fill verde";
+  void fill.getBoundingClientRect();
+  fill.style.transition = "width 1s linear";
+  _turnoTimer = setInterval(()=>{
+    _turnoRestante--;
+    fill.style.width = Math.max(0, (_turnoRestante / SEGUNDOS_TURNO) * 100) + "%";
+    fill.className = "sb-tempo-fill " + (_turnoRestante<=8 ? "vermelho" : _turnoRestante<=15 ? "amarelo" : "verde");
+    if(_turnoRestante <= 0){
+      pararTurnoTimerJogo();
+      if(!estado.travado && estado.turnoDe === "jogador" && estado.jogador[0]){
+        const ch = ATRIBUTOS[Math.floor(Math.random() * ATRIBUTOS.length)].chave;   // tempo esgotou → joga aleatório
+        jogarAtributo(ch);
+      }
+    }
+  }, 1000);
 }
 
 function proximaRodada(){
@@ -582,6 +616,7 @@ function proximaRodada(){
     $("#carta-jogador").querySelectorAll(".attr.clicavel").forEach(el=>{
       el.addEventListener("click", ()=>jogarAtributo(el.dataset.attr));
     });
+    iniciarTurnoTimerJogo();   // 30s para escolher um atributo
   } else {
     $("#turno-aviso").textContent = "🤖 O OPONENTE ESTÁ PENSANDO...";
     setTimeout(()=>jogarAtributo(escolhaCPU(seu), true), 1200);
@@ -617,6 +652,7 @@ function escolhaCPU(carta){
 function jogarAtributo(chave, porOponente){
   if(estado.travado) return;
   estado.travado = true;
+  pararTurnoTimerJogo();   // encerra o timer de 30s ao jogar
 
   const meu = estado.jogador[0];
   const seu = estado.cpu[0];
@@ -904,13 +940,29 @@ function finalizar(empate){
   mostrarMarcoNoFim(_marcoPremio);
 }
 
-// mostra o prêmio de marco de vitórias (pausa o auto-avanço e abre o pacote)
+// mostra o prêmio de marco de vitórias como uma CARTA DE INTERROGAÇÃO;
+// o jogador clica para revelar o pacote e as cartas (pausa o auto-avanço)
 function mostrarMarcoNoFim(premio){
-  if(!premio) return;
+  const host = $("#fim-marco");
+  if(!premio){ if(host){ host.hidden = true; host.innerHTML = ""; } return; }
   clearInterval(_fimTimer); _fimTimer = null;   // deixa o jogador ver o prêmio sem pressa
   Som.play("premio");
-  $("#fim-sub").innerHTML += `<br><span class="marco-vitoria">🎉 ${premio.marco} vitórias — você ganhou um ${premio.pac.nome}!</span>`;
-  mostrarAberturaPacote(premio.pac, premio.ganhos);
+  $("#fim-sub").innerHTML += `<br><span class="marco-vitoria">🎉 ${premio.marco} vitórias — um ${premio.pac.nome} apareceu!</span>`;
+  host.hidden = false;
+  host.innerHTML =
+    `<div class="marco-carta" role="button" tabindex="0" title="Clique para revelar">
+       <div class="marco-carta-face">?</div>
+       <div class="marco-carta-lbl">Clique para abrir<br>${premio.pac.emoji} ${premio.pac.nome}</div>
+     </div>`;
+  const card = host.querySelector(".marco-carta");
+  const revelar = ()=>{
+    if(card.dataset.aberto) return;
+    card.dataset.aberto = "1";
+    host.hidden = true;
+    mostrarAberturaPacote(premio.pac, premio.ganhos);
+  };
+  card.addEventListener("click", revelar);
+  card.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" ") revelar(); });
 }
 function abrirCampanha(){ renderCampanha("normal"); }
 function abrirCampanhaVida(){ renderCampanha("vida"); }

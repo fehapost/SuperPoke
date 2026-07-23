@@ -60,12 +60,17 @@ const sb = {
 };
 
 function sbEfAtk(s){ return Math.max(1, Math.round(s.carta.ataque * (s.cima?1.1:1))); }
-function sbEfDefMax(s){ return Math.max(1, Math.round(s.carta.defesa * (s.cima?1.2:1))); }
+function sbEfDef(s){ return Math.max(0, Math.round(s.carta.defesa * (s.cima?1.2:1))); }
 function sbNovoSlot(carta, modo, cima){
-  const s = {carta, modo, cima:!!cima, jaAtacou:false, revelada:false};
-  s.def = sbEfDefMax(s);
+  // vida = pontos de vida da carta (pool). Defesa é redutor de dano.
+  const s = {carta, modo, cima:!!cima, jaAtacou:false, revelada:false, focoAtk:false, focoDef:false};
+  s.vida = carta.vida;
+  s.vidaMax = carta.vida;
   return s;
 }
+// limites de posições: até 3 em ataque, até 2 em defesa
+const SB_MAX_ATK = 3, SB_MAX_DEF = 2;
+function sbContar(campo, modo){ return campo.filter(s=>s.modo===modo).length; }
 
 /* ---------- Início da partida ---------- */
 function abrirCampanhaSuper(){
@@ -134,7 +139,7 @@ function sbIniciarTurno(quem){
   // jogador: 60s por turno, senão perde a vez
   _sbTurnoRestante = 60;
   const el = $("#sb-timer");
-  const tick = ()=>{ if(el) el.textContent = `⏱ ${_sbTurnoRestante}s`; };
+  const tick = ()=>{ if(el) el.textContent = `⏱ ${_sbTurnoRestante}s`; sbAtualizarBarraTempo(); };
   tick();
   _sbTurnoTimer = setInterval(()=>{
     _sbTurnoRestante--;
@@ -167,103 +172,182 @@ function sbComprar(){
 // clique numa carta da mão -> abre opções de colocação
 function sbClicarMao(idx){
   if(sb.travado || sb.turnoDe !== "jogador" || sb.acoes <= 0) return;
-  if(sb.campoJog.length >= 5){ Som.play("erro"); sbMsg("Seu campo já tem 5 cartas."); return; }
+  // abre o pop-up de colocação (carta vem à frente)
   sb.selecao = {tipo:"colocar", idx};
-  sbDesenhar();
+  sbAbrirModalColocar(idx);
 }
 function sbColocar(idx, modo, cima){
-  if(sb.campoJog.length >= 5) return;
-  const carta = sb.maoJog.splice(idx, 1)[0];
+  const carta = sb.maoJog[idx];
   if(!carta) return;
+  if(modo === "ataque" && sbContar(sb.campoJog, "ataque") >= SB_MAX_ATK){ Som.play("erro"); sbFecharModalColocar(); sbMsg(`Máximo de ${SB_MAX_ATK} cartas em ataque.`); return; }
+  if(modo === "defesa" && sbContar(sb.campoJog, "defesa") >= SB_MAX_DEF){ Som.play("erro"); sbFecharModalColocar(); sbMsg(`Máximo de ${SB_MAX_DEF} cartas em defesa.`); return; }
+  sb.maoJog.splice(idx, 1);
   sb.campoJog.push(sbNovoSlot(carta, modo, cima));
   sb.selecao = null;
+  sbFecharModalColocar();
   Som.play("comprar");
-  sbLog(`Você colocou uma carta em ${modo === "ataque" ? "ATAQUE" : "DEFESA"} (${cima ? "virada p/ cima" : "virada p/ baixo"}).`);
+  sbLog(`Você colocou ${carta.nome} em ${modo === "ataque" ? "ATAQUE" : "DEFESA"} (${cima ? "virada p/ cima" : "virada p/ baixo"}).`);
   sbGastarAcao();
 }
 // clique numa carta do campo do jogador -> se for ataque e não atacou, inicia alvo
-function sbClicarCampoJog(idx){
+function sbClicarCampoJog(slot){
   if(sb.travado || sb.turnoDe !== "jogador" || sb.acoes <= 0) return;
-  const s = sb.campoJog[idx];
-  if(!s) return;
-  if(s.modo !== "ataque"){ sbMsg("Só cartas em ATAQUE podem atacar."); return; }
-  if(s.jaAtacou){ sbMsg("Essa carta já atacou neste turno."); return; }
-  sb.selecao = {tipo:"atacar", idx};
+  if(!slot) return;
+  if(slot.modo !== "ataque"){ sbMsg("Só cartas em ATAQUE podem atacar."); return; }
+  if(slot.jaAtacou){ sbMsg("Essa carta já atacou neste turno."); return; }
+  sb.selecao = {tipo:"atacar", atacante:slot};
   sbMsg("Escolha o alvo: uma carta do oponente ou ataque direto.");
   sbDesenhar();
 }
 // clique num alvo do oponente
-function sbClicarCampoCpu(idx){
+function sbClicarCampoCpu(slot){
   if(!sb.selecao || sb.selecao.tipo !== "atacar") return;
-  const atk = sb.campoJog[sb.selecao.idx];
-  const alvo = sb.campoCpu[idx];
-  if(!atk || !alvo) return;
-  sbExecAtaqueCarta(atk, alvo, sb.campoCpu, "cpu");
+  const atk = sb.selecao.atacante;
+  if(!atk || !slot) return;
+  sbExecAtaqueCarta(atk, slot, sb.campoCpu, "cpu");
 }
 function sbAtaqueDireto(){
   if(!sb.selecao || sb.selecao.tipo !== "atacar") return;
-  const atk = sb.campoJog[sb.selecao.idx];
+  const atk = sb.selecao.atacante;
   // se o oponente tem carta em DEFESA, o ataque é redirecionado para ela
-  const defensores = sb.campoCpu.map((s,i)=>({s,i})).filter(x=>x.s.modo==="defesa");
+  const defensores = sb.campoCpu.filter(s=>s.modo==="defesa");
   if(defensores.length){
-    defensores.sort((a,b)=>a.s.def-b.s.def);   // pega o defensor mais fraco
+    defensores.sort((a,b)=>a.vida-b.vida);   // pega o defensor com menos vida
     sbMsg("O oponente tem defensor — ataque redirecionado!");
-    sbExecAtaqueCarta(atk, defensores[0].s, sb.campoCpu, "cpu");
+    sbExecAtaqueCarta(atk, defensores[0], sb.campoCpu, "cpu");
   } else {
     sbExecAtaqueDireto(atk, "cpu");
   }
 }
 
-/* ---------- Resolução de ataques (genérica) ---------- */
+/* ---------- Combate animado ---------- */
+const SB_ELEM_ICON = {FOGO:"🔥",AGUA:"💧",GRAMA:"🌿",ELETRICO:"⚡",GELO:"❄️",LUTADOR:"🥊",
+  VENENO:"☠️",TERRA:"⛰️",VOADOR:"🌪️",PSIQUICO:"🔮",INSETO:"🐛",PEDRA:"🪨",FANTASMA:"👻",
+  DRAGAO:"🐉",NORMAL:"⭐",ACO:"⚙️",FADA:"✨"};
+function sbElemIcon(t){ return SB_ELEM_ICON[sbNormTipo(t)] || "⭐"; }
+function sbFormula(html){ const f = $("#combate-formula"); if(f) f.innerHTML = html; }
+function sbRolarNumero(el, de, para, ms){
+  if(!el) return;
+  const ini = performance.now();
+  const passo = (agora)=>{
+    const t = Math.min(1, (agora-ini)/ms);
+    el.textContent = Math.round(de + (para-de)*t);
+    if(t < 1) requestAnimationFrame(passo); else el.textContent = para;
+  };
+  requestAnimationFrame(passo);
+}
+
+// ataque a uma carta (dano = elemento×ataque − defesa → subtrai da VIDA; excedente vai ao LP)
 function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
-  const mult = sbEfetividade(atkSlot.carta.tipo1, alvoSlot.carta.tipo1);
-  const dano = Math.max(1, Math.round(sbEfAtk(atkSlot) * mult));
+  sb.travado = true;
+  const eraVirada = !alvoSlot.cima && !alvoSlot.revelada;
   alvoSlot.revelada = true;
-  alvoSlot.def -= dano;
   atkSlot.jaAtacou = true;
-  const elem = mult > 1 ? " (super eficaz ×1.5!)" : mult < 1 ? " (pouco eficaz ×0.5)" : "";
-  let txt = `${atkSlot.carta.nome} atacou ${alvoSlot.carta.nome}: ${dano} de dano${elem}.`;
-  if(alvoSlot.def <= 0){
-    const i = campoAlvo.indexOf(alvoSlot);
-    if(i >= 0) campoAlvo.splice(i, 1);
-    txt += ` ${alvoSlot.carta.nome} foi destruída!`;
-    sbBanner(`${atkSlot.carta.nome} derrotou ${alvoSlot.carta.nome}! (-${dano})`, "bom");
-    Som.play("vencerRodada");
-  } else {
-    txt += ` Restam ${alvoSlot.def} de defesa.`;
-    sbBanner(`${atkSlot.carta.nome} atacou ${alvoSlot.carta.nome} (-${dano} def)`, "neutro");
+  sbDesenhar();
+
+  const mult = sbEfetividade(atkSlot.carta.tipo1, alvoSlot.carta.tipo1);
+  const atkVal = sbEfAtk(atkSlot);
+  const elemental = Math.round(atkVal * mult);
+  const def = sbEfDef(alvoSlot);
+  const dano = Math.max(0, elemental - def);
+  const vidaAntes = alvoSlot.vida;
+  const destrui = dano >= vidaAntes;
+  const overflow = destrui ? (dano - vidaAntes) : 0;
+
+  // abre o pop-up de combate com as duas cartas grandes
+  $("#combate-atk").innerHTML = sbHtmlCarta(atkSlot, true);
+  $("#combate-alvo").innerHTML = sbHtmlCarta(alvoSlot, true);
+  $("#combate-coracao").hidden = true;
+  sbFormula("");
+  const ov = $("#sb-combate"); ov.hidden = false;
+
+  const t = eraVirada ? 1100 : 500;   // vira e espera 1s se estava p/ baixo
+  const corElem = mult>1 ? "cb-forte" : mult<1 ? "cb-fraco" : "";
+  // beat 1: ataque × multiplicador (ícone do elemento)
+  setTimeout(()=>{
+    sbFormula(`<span class="cb-num">${atkVal}</span> <span class="cb-x">×</span> <span class="${corElem}">${mult} ${sbElemIcon(atkSlot.carta.tipo1)}</span>`);
     Som.play("atributo");
-  }
-  sbLog(txt);
-  sb.selecao = null;
-  efeitoTela(mult > 1 ? "vitoria" : "empate");
-  sbPosAtaque();
+  }, t);
+  // beat 2: gira para o valor elemental
+  setTimeout(()=>{
+    sbFormula(`<span class="cb-giro"><b id="cb-roll">${atkVal}</b> ${sbElemIcon(atkSlot.carta.tipo1)}</span>`);
+    sbRolarNumero($("#cb-roll"), atkVal, elemental, 700);
+  }, t+1400);
+  // beat 3: − defesa = dano; aplica na vida do alvo
+  setTimeout(()=>{
+    sbFormula(`<span class="cb-num">${elemental}</span> <span class="cb-x">−</span> <span class="cb-def">${def} def</span> = <b class="cb-dano">${dano}</b>`);
+    alvoSlot.vida = Math.max(0, vidaAntes - dano);
+    $("#combate-alvo").innerHTML = sbHtmlCarta(alvoSlot, true);
+    const el = $("#combate-alvo .sbcard"); if(el) el.classList.add("tremendo");
+    Som.play(dano>0 ? "vencerRodada" : "erro");
+  }, t+2900);
+  // beat 4: destruição + excedente no LP
+  setTimeout(()=>{
+    if(destrui){
+      const el = $("#combate-alvo .sbcard"); if(el){ el.classList.add("destruida"); }
+      const i = campoAlvo.indexOf(alvoSlot); if(i>=0) campoAlvo.splice(i,1);
+      sbLog(`${atkSlot.carta.nome} derrotou ${alvoSlot.carta.nome}!`);
+      if(overflow > 0){
+        setTimeout(()=>{
+          $("#combate-coracao").hidden = false;
+          $("#combate-lp").textContent = "-" + overflow;
+          if(ladoAlvo==="cpu") sb.lpCpu = Math.max(0, sb.lpCpu - overflow); else sb.lpJog = Math.max(0, sb.lpJog - overflow);
+          sbLog(`Excedente de ${overflow} atingiu o LP!`);
+          Som.play("perderRodada");
+          setTimeout(sbCombateFechar, 1500);
+        }, 1200);
+      } else setTimeout(sbCombateFechar, 1300);
+    } else {
+      sbLog(`${atkSlot.carta.nome} atacou ${alvoSlot.carta.nome} — vida ${alvoSlot.vida}/${alvoSlot.vidaMax}.`);
+      setTimeout(sbCombateFechar, 1300);
+    }
+  }, t+4300);
 }
+// ataque direto ao LP (coração)
 function sbExecAtaqueDireto(atkSlot, ladoAlvo){
-  const dano = sbEfAtk(atkSlot);
+  sb.travado = true;
   atkSlot.jaAtacou = true;
-  if(ladoAlvo === "cpu"){ sb.lpCpu = Math.max(0, sb.lpCpu - dano); }
-  else { sb.lpJog = Math.max(0, sb.lpJog - dano); }
-  sbLog(`⚔️ ATAQUE DIRETO! ${atkSlot.carta.nome} causou ${dano} de dano aos pontos de vida.`);
-  sbBanner(`⚔️ ${atkSlot.carta.nome} atacou direto! (-${dano} LP)`, ladoAlvo==="cpu"?"bom":"ruim");
-  Som.play("perderRodada");
-  efeitoTela(ladoAlvo === "cpu" ? "vitoria" : "derrota");
+  const dano = sbEfAtk(atkSlot);
+  $("#combate-atk").innerHTML = sbHtmlCarta(atkSlot, true);
+  $("#combate-alvo").innerHTML = `<div class="combate-lp-alvo">❤️<span>LP</span></div>`;
+  sbFormula("");
+  $("#combate-coracao").hidden = true;
+  $("#sb-combate").hidden = false;
+  setTimeout(()=>{ sbFormula(`⚔️ <span class="cb-num">${dano}</span> ataque direto!`); Som.play("atributo"); }, 500);
+  setTimeout(()=>{
+    $("#combate-coracao").hidden = false;
+    $("#combate-lp").textContent = "-" + dano;
+    if(ladoAlvo==="cpu") sb.lpCpu = Math.max(0, sb.lpCpu - dano); else sb.lpJog = Math.max(0, sb.lpJog - dano);
+    sbLog(`⚔️ ATAQUE DIRETO! ${atkSlot.carta.nome} causou ${dano} de dano ao LP.`);
+    Som.play("perderRodada");
+    setTimeout(sbCombateFechar, 1600);
+  }, 1800);
+}
+function sbCombateFechar(){
+  const ov = $("#sb-combate"); if(ov) ov.hidden = true;
   sb.selecao = null;
+  sb.travado = (sb.turnoDe === "cpu");
+  sbDesenhar();
+  // LP zerou: espera 1s e mostra o pop-up "você venceu / perdeu" com OK antes de mudar de tela
+  if(sb.lpCpu <= 0 || sb.lpJog <= 0){ sb.travado = true; sb.fim = true; setTimeout(()=>sbMostrarFimPop(sb.lpCpu <= 0), 1000); return; }
   sbPosAtaque();
 }
-// banner grande na tela mostrando o que aconteceu
-function sbBanner(txt, tipo){
-  const b = $("#sb-banner");
-  if(!b) return;
-  b.textContent = txt;
-  b.className = "mostra " + (tipo || "neutro");
-  clearTimeout(sbBanner._t);
-  sbBanner._t = setTimeout(()=>{ b.className = ""; }, 2200);
+// pop-up de resultado: o jogador clica OK para ir à tela de fim
+function sbMostrarFimPop(venceu){
+  sbLimparTurnoTimer();
+  const pop = $("#sb-fim-pop"); if(!pop){ sbFim(venceu); return; }
+  $("#sb-fim-pop-emoji").textContent = venceu ? "🏆" : "☠";
+  $("#sb-fim-pop-titulo").textContent = venceu ? "VOCÊ VENCEU!" : "VOCÊ PERDEU";
+  $("#sb-fim-pop-titulo").className = venceu ? "venceu" : "perdeu";
+  $("#sb-fim-pop-sub").textContent = venceu
+    ? `Você zerou o LP de ${sb.nomeOp}!`
+    : `${sb.nomeOp} zerou seu LP.`;
+  Som.play(venceu ? "vencerPartida" : "perderPartida");
+  pop.hidden = false;
 }
 function sbPosAtaque(){
-  if(sb.lpCpu <= 0 || sb.lpJog <= 0){ sbDesenhar(); return sbFim(sb.lpCpu <= 0); }
-  if(sb.turnoDe === "jogador") sbGastarAcao();
-  else sbDesenhar();
+  if(sb.turnoDe === "jogador"){ sbGastarAcao(); }
+  else { sb.acoes--; sbDesenhar(); setTimeout(()=>{ if(!sb.fim) (sb.acoes>0 ? sbPassoCPU() : sbEncerrarTurno()); }, 900); }
 }
 
 /* ---------- IA do oponente ---------- */
@@ -275,13 +359,13 @@ function sbPassoCPU(){
   const defensores = campo.filter(s=>s.modo==="defesa");
 
   // 1) atacar se tiver atacante (escolhe o atacante com variedade)
+  // OBS: a animação de combate chama sbPosAtaque no fim, que decrementa a ação e agenda o próximo passo.
   if(atacantes.length){
     const atkOrd = atacantes.slice().sort((a,b)=>sbEfAtk(b)-sbEfAtk(a));
     const atk = escolhaComErro(atkOrd);
     const defsJog = sb.campoJog.filter(s=>s.modo==="defesa");
     if(defsJog.length){
-      // alvo entre defensores, com variedade (melhor = defesa mais fraca)
-      const alvoOrd = defsJog.slice().sort((a,b)=>a.def-b.def);
+      const alvoOrd = defsJog.slice().sort((a,b)=>a.vida-b.vida);
       sbExecAtaqueCarta(atk, escolhaComErro(alvoOrd), sb.campoJog, "jogador");
     } else if(sb.campoJog.length && Math.random()<0.3){
       const alvo = sb.campoJog[Math.floor(Math.random()*sb.campoJog.length)];
@@ -289,16 +373,19 @@ function sbPassoCPU(){
     } else {
       sbExecAtaqueDireto(atk, "jogador");
     }
-    sb.acoes--;
-    return void setTimeout(sbPassoCPU, 900);
+    return;   // a continuação vem por sbPosAtaque após a animação
   }
-  // 2) colocar carta se tiver espaço e mão (escolhe a carta com variedade)
-  if(campo.length < 5 && mao.length){
+  // 2) colocar carta respeitando os limites (até 3 ataque, 2 defesa)
+  const podeAtk = sbContar(campo,"ataque") < SB_MAX_ATK;
+  const podeDef = sbContar(campo,"defesa") < SB_MAX_DEF;
+  if((podeAtk || podeDef) && mao.length){
     const ordem = mao.map((c,i)=>({i, sc:Math.max(c.ataque,c.defesa)})).sort((a,b)=>b.sc-a.sc);
     const escolha = escolhaComErro(ordem);
     const melhor = escolha.i;
     let melhorModo = mao[melhor].ataque >= mao[melhor].defesa ? "ataque" : "defesa";
-    if(defensores.length === 0 && mao[melhor].defesa >= 30) melhorModo = "defesa";
+    if(defensores.length === 0 && podeDef && mao[melhor].defesa >= 30) melhorModo = "defesa";
+    if(melhorModo === "ataque" && !podeAtk) melhorModo = "defesa";
+    if(melhorModo === "defesa" && !podeDef) melhorModo = "ataque";
     const cima = Math.random() < 0.25;           // maioria virada p/ baixo
     const carta = mao.splice(melhor,1)[0];
     campo.push(sbNovoSlot(carta, melhorModo, cima));
@@ -374,21 +461,51 @@ function sbHtmlCarta(s, meu){
   if(!visivel) return `<div class="sbcard verso"><div class="sb-verso-pk"></div></div>`;
   const p = s.carta, c1 = corTipo(p.tipo1), c2 = corTipo(p.tipo2 || p.tipo1);
   const ehAtaque = s.modo === "ataque";
-  const modo = ehAtaque ? "m-atk" : "m-def deitada";   // defesa fica deitada (rotacionada)
-  // status principal grande no meio (o do modo), o outro pequeno embaixo
+  const modo = ehAtaque ? "m-atk" : "m-def deitada";   // defesa fica deitada (só o pokémon gira)
+  const atk = sbEfAtk(s), def = sbEfDef(s);
+  const atkCls = s.focoAtk ? " foco" : "", defCls = s.focoDef ? " foco" : "";
   const grandeIcon = ehAtaque ? "⚔" : "🛡";
-  const grandeVal  = ehAtaque ? sbEfAtk(s) : s.def;
-  const pequenoLbl = ehAtaque ? "DEF" : "ATK";
-  const pequenoVal = ehAtaque ? s.def : sbEfAtk(s);
+  const grandeVal  = ehAtaque ? atk : def;
+  const grandeCls  = ehAtaque ? atkCls : defCls;
+  const pequenoIcon = ehAtaque ? "🛡" : "⚔";
+  const pequenoVal = ehAtaque ? def : atk;
+  const pequenoCls = ehAtaque ? defCls : atkCls;
   return `<div class="sbcard ${modo}${s.cima?' cima':''}" style="--c1:${c1};--c2:${c2}">
-      <div class="sb-conteudo">
-        <span class="sb-modo-tag">${ehAtaque?"⚔️":"🛡️"}${s.cima?" ⬆":""}</span>
-        <img src="${SPRITE(p.id)}" loading="lazy" alt="${p.nome}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(p.id)}'">
-        <span class="sb-nome">${p.nome}</span>
-        <span class="sb-stat-grande">${grandeIcon} ${grandeVal}</span>
-        <span class="sb-stat-peq">${pequenoLbl} ${pequenoVal}</span>
-      </div>
+      <span class="sb-vida-tag${defCls}">❤ ${s.vida}</span>
+      <span class="sb-modo-tag">${ehAtaque?"⚔️":"🛡️"}${s.cima?" ⬆":""}</span>
+      <img class="sb-poke" src="${SPRITE(p.id)}" loading="lazy" alt="${p.nome}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(p.id)}'">
+      <span class="sb-nome">${p.nome}</span>
+      <span class="sb-stat-grande${grandeCls}">${grandeIcon} ${grandeVal}</span>
+      <span class="sb-stat-peq${pequenoCls}">${pequenoIcon} ${pequenoVal}</span>
     </div>`;
+}
+// renderiza um campo com 3 slots de ATAQUE (em pé) e 2 de DEFESA (deitados)
+function sbRenderCampo(containerId, cards, meu, atacando){
+  const cont = $("#"+containerId); if(!cont) return;
+  cont.innerHTML = "";
+  const atk = cards.filter(s=>s.modo==="ataque");
+  const def = cards.filter(s=>s.modo==="defesa");
+  const gAtk = document.createElement("div"); gAtk.className = "sb-grupo grupo-atk";
+  for(let i=0;i<SB_MAX_ATK;i++) gAtk.appendChild(sbSlotEl(atk[i], meu, atacando, "atk"));
+  const gDef = document.createElement("div"); gDef.className = "sb-grupo grupo-def";
+  for(let i=0;i<SB_MAX_DEF;i++) gDef.appendChild(sbSlotEl(def[i], meu, atacando, "def"));
+  // oponente: defesa em cima, ataque perto do centro. jogador: ataque perto do centro, defesa embaixo.
+  if(meu){ cont.appendChild(gAtk); cont.appendChild(gDef); }
+  else   { cont.appendChild(gDef); cont.appendChild(gAtk); }
+}
+function sbSlotEl(slot, meu, atacando, tipoSlot){
+  const div = document.createElement("div");
+  const podeAtacar = meu && slot && slot.modo==="ataque" && !slot.jaAtacou && sb.turnoDe==="jogador" && sb.acoes>0 && !sb.travado;
+  div.className = "sb-slot slot-" + tipoSlot + (slot ? "" : " vazio") +
+    (!meu && atacando && slot ? " alvo" : "") +
+    (podeAtacar ? " pode-atacar" : "") +
+    (atacando && sb.selecao.atacante === slot ? " selecionado" : "");
+  div.innerHTML = slot ? sbHtmlCarta(slot, meu) : "";
+  if(slot){
+    if(meu && sb.turnoDe==="jogador" && !sb.travado) div.onclick = ()=>sbClicarCampoJog(slot);
+    if(!meu && atacando) div.onclick = ()=>sbClicarCampoCpu(slot);
+  }
+  return div;
 }
 
 function sbDesenhar(){
@@ -409,30 +526,8 @@ function sbDesenhar(){
   $("#sb-deck-jog-n").textContent = sb.baralhoJog.length;
 
   const atacando = sb.selecao && sb.selecao.tipo === "atacar";
-
-  // campo do oponente (5 slots)
-  const cCpu = $("#sb-campo-cpu"); cCpu.innerHTML = "";
-  for(let i=0;i<5;i++){
-    const slot = sb.campoCpu[i];
-    const div = document.createElement("div");
-    div.className = "sb-slot" + (slot ? "" : " vazio") + (atacando && slot ? " alvo" : "");
-    div.innerHTML = slot ? sbHtmlCarta(slot, false) : "";
-    if(atacando && slot) div.onclick = ()=>sbClicarCampoCpu(i);
-    cCpu.appendChild(div);
-  }
-  // campo do jogador (5 slots)
-  const cJog = $("#sb-campo-jog"); cJog.innerHTML = "";
-  for(let i=0;i<5;i++){
-    const slot = sb.campoJog[i];
-    const podeAtacar = slot && slot.modo==="ataque" && !slot.jaAtacou && sb.turnoDe==="jogador" && sb.acoes>0 && !sb.travado;
-    const div = document.createElement("div");
-    div.className = "sb-slot" + (slot ? "" : " vazio") +
-      (podeAtacar ? " pode-atacar" : "") +
-      (atacando && sb.selecao.idx===i ? " selecionado" : "");
-    div.innerHTML = slot ? sbHtmlCarta(slot, true) : "";
-    if(slot && sb.turnoDe==="jogador") div.onclick = ()=>sbClicarCampoJog(i);
-    cJog.appendChild(div);
-  }
+  sbRenderCampo("sb-campo-cpu", sb.campoCpu, false, atacando);
+  sbRenderCampo("sb-campo-jog", sb.campoJog, true, atacando);
   // mão do jogador
   const mao = $("#sb-mao"); mao.innerHTML = "";
   sb.maoJog.forEach((carta, i)=>{
@@ -459,32 +554,46 @@ function sbDesenhar(){
   $("#btn-sb-encerrar").disabled = sb.travado || sb.turnoDe!=="jogador";
   const tm = $("#sb-timer"); if(tm) tm.style.visibility = (sb.turnoDe==="jogador" && !sb.fim) ? "visible" : "hidden";
 
-  // painel de colocação: opções à esquerda, info da carta à direita
-  const pc = $("#sb-colocar");
-  if(sb.selecao && sb.selecao.tipo === "colocar"){
-    const carta = sb.maoJog[sb.selecao.idx];
-    pc.hidden = false;
-    if(carta){
-      const c1 = corTipo(carta.tipo1), c2 = corTipo(carta.tipo2 || carta.tipo1);
-      $("#sb-colocar-info").innerHTML =
-        `<div class="sb-info-carta" style="--c1:${c1};--c2:${c2}">
-           <img src="${SPRITE(carta.id)}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(carta.id)}'">
-           <div class="sb-info-nome">${carta.nome}</div>
-           <div class="sb-info-tipo">${carta.tipo1}${carta.tipo2?" / "+carta.tipo2:""}</div>
-           <div class="sb-info-stats"><span>⚔️ ${carta.ataque}</span><span>🛡️ ${carta.defesa}</span></div>
-         </div>`;
-    }
-  } else pc.hidden = true;
-
   // botão de ataque direto
   const bd = $("#sb-btn-direto");
   bd.hidden = !atacando;
 
-  if(!sb.selecao){
+  if(!sb.selecao || sb.selecao.tipo === "colocar"){
     sbMsg(sb.turnoDe==="jogador" && !sb.fim
-      ? "Seu turno: compre, coloque cartas (ataque/defesa) ou ataque. Você tem 3 ações."
+      ? "Seu turno: compre no baralho, coloque cartas ou ataque. Você tem 3 ações."
       : (sb.fim ? "" : "O oponente está jogando..."));
   }
+}
+
+/* ---------- Pop-up de colocação (carta vem à frente) ---------- */
+function sbAbrirModalColocar(idx){
+  const carta = sb.maoJog[idx];
+  if(!carta) return;
+  const c1 = corTipo(carta.tipo1), c2 = corTipo(carta.tipo2 || carta.tipo1);
+  $("#modal-colocar-carta").innerHTML =
+    `<div class="sb-info-carta grande" style="--c1:${c1};--c2:${c2}">
+       <img src="${SPRITE(carta.id)}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(carta.id)}'">
+       <div class="sb-info-nome">${carta.nome}</div>
+       <div class="sb-info-tipo">${carta.tipo1}${carta.tipo2?" / "+carta.tipo2:""}</div>
+       <div class="sb-info-stats"><span>⚔️ ${carta.ataque}</span><span>🛡️ ${carta.defesa}</span><span>❤ ${carta.vida}</span></div>
+     </div>`;
+  // desabilita opções conforme limites
+  const semAtk = sbContar(sb.campoJog,"ataque") >= SB_MAX_ATK;
+  const semDef = sbContar(sb.campoJog,"defesa") >= SB_MAX_DEF;
+  document.querySelectorAll("#modal-sb-colocar .sb-opcao").forEach(op=>{
+    op.disabled = (op.dataset.modo==="ataque" && semAtk) || (op.dataset.modo==="defesa" && semDef);
+  });
+  $("#modal-sb-colocar").hidden = false;
+}
+function sbFecharModalColocar(){ const m = $("#modal-sb-colocar"); if(m) m.hidden = true; sb.selecao = null; }
+
+/* ---------- Barra de tempo do turno (sutil, verde→amarelo→vermelho) ---------- */
+function sbAtualizarBarraTempo(){
+  const barra = $("#sb-tempo-fill");
+  if(!barra) return;
+  const pct = Math.max(0, Math.min(100, (_sbTurnoRestante/60)*100));
+  barra.style.width = pct + "%";
+  barra.className = "sb-tempo-fill " + (_sbTurnoRestante<=10 ? "vermelho" : _sbTurnoRestante<=25 ? "amarelo" : "verde");
 }
 
 /* ---------- Loja: comprar LP ---------- */
@@ -507,15 +616,16 @@ function comprarLPSuper(){
 /* ---------- Ligações ---------- */
 document.addEventListener("DOMContentLoaded", ()=>{
   const bt = $("#btn-campanha-super"); if(bt) bt.addEventListener("click", abrirCampanhaSuper);
-  const bc = $("#btn-sb-comprar"); if(bc) bc.addEventListener("click", sbComprar);
   const be = $("#btn-sb-encerrar"); if(be) be.addEventListener("click", ()=>{ if(!sb.travado && sb.turnoDe==="jogador") sbEncerrarTurno(); });
-  const bs = $("#btn-sb-sair"); if(bs) bs.addEventListener("click", ()=>{ sb.fim=true; limparTimers(); abrirCampanhaSuper(); });
+  const bs = $("#btn-sb-sair"); if(bs) bs.addEventListener("click", ()=>{ sb.fim=true; sbLimparTurnoTimer(); limparTimers(); abrirCampanhaSuper(); });
   const bd = $("#sb-btn-direto"); if(bd) bd.addEventListener("click", sbAtaqueDireto);
   const bl = $("#btn-comprar-lp"); if(bl) bl.addEventListener("click", comprarLPSuper);
-  const bcancel = $("#sb-colocar-cancelar"); if(bcancel) bcancel.addEventListener("click", ()=>{ sb.selecao=null; sbDesenhar(); });
-  // opções de colocação (delegação)
-  document.querySelectorAll(".sb-opcao").forEach(op=>op.addEventListener("click", ()=>{
-    if(!sb.selecao || sb.selecao.tipo!=="colocar") return;
+  const bcancel = $("#sb-colocar-cancelar"); if(bcancel) bcancel.addEventListener("click", sbFecharModalColocar);
+  const bok = $("#sb-fim-pop-ok"); if(bok) bok.addEventListener("click", ()=>{ const p=$("#sb-fim-pop"); if(p) p.hidden=true; sbFim(sb.lpCpu <= 0); });
+  const mc = $("#modal-sb-colocar"); if(mc) mc.addEventListener("click", e=>{ if(e.target.id==="modal-sb-colocar") sbFecharModalColocar(); });
+  // opções de colocação (no modal)
+  document.querySelectorAll("#modal-sb-colocar .sb-opcao").forEach(op=>op.addEventListener("click", ()=>{
+    if(!sb.selecao || sb.selecao.tipo!=="colocar" || op.disabled) return;
     sbColocar(sb.selecao.idx, op.dataset.modo, op.dataset.cima === "1");
   }));
 });

@@ -149,9 +149,13 @@ body{
 #sb-acoes{font-size:.8rem;color:#8ff0a8}
 
 .sb-campo-rot{width:100%;text-align:center;font-size:.66rem;letter-spacing:1px;opacity:.6;text-transform:uppercase}
-.sb-campo{width:100%;max-width:820px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.sb-slot{aspect-ratio:3/4;border-radius:10px;border:2px dashed rgba(255,255,255,.18);
-  display:flex;align-items:center;justify-content:center;min-height:120px}
+/* campo em duas fileiras: ataque (em pé) e defesa (deitadas) */
+.sb-campo{width:100%;max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:8px;align-items:center}
+.sb-grupo{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.sb-slot{border-radius:10px;border:2px dashed rgba(255,255,255,.20);
+  display:flex;align-items:center;justify-content:center}
+.sb-slot.slot-atk{width:94px;aspect-ratio:3/4}                 /* posição de ATAQUE: retrato */
+.sb-slot.slot-def{width:120px;height:82px}                      /* posição de DEFESA: paisagem (deitada) */
 .sb-slot.vazio{background:rgba(255,255,255,.04)}
 .sb-slot.pode-atacar{border-color:var(--amarelo);cursor:pointer;box-shadow:0 0 8px rgba(255,203,5,.4)}
 .sb-slot.selecionado{border-color:var(--amarelo);box-shadow:0 0 14px rgba(255,203,5,.7)}
@@ -159,31 +163,63 @@ body{
   box-shadow:0 0 10px rgba(227,53,13,.55);animation:pulse 1s infinite}
 
 #sb-timer{font-weight:900;color:#ff9d8a;font-size:.9rem}
+/* barra de tempo do turno (bem fina — metade da barra de vida) */
+#sb-tempo-barra{width:100%;max-width:820px;margin:0 auto;height:4px;border-radius:3px;
+  background:rgba(0,0,0,.35);overflow:hidden}
+.sb-tempo-fill{height:100%;width:100%;border-radius:3px;transition:width 1s linear,background .4s}
+.sb-tempo-fill.verde{background:linear-gradient(90deg,#2e9e3f,#7ff0a8)}
+.sb-tempo-fill.amarelo{background:linear-gradient(90deg,#c99a17,#ffe08a)}
+.sb-tempo-fill.vermelho{background:linear-gradient(90deg,#a01d0a,#ff6a4d)}
+
 .sbcard{width:100%;height:100%;border-radius:10px;overflow:hidden;position:relative;
   background:linear-gradient(160deg,var(--c1,#666),var(--c2,#333));border:2px solid rgba(255,255,255,.4);
-  transition:transform .2s}
-.sbcard .sb-conteudo{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;padding:3px}
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:3px;transition:transform .2s,filter .5s}
 .sbcard.m-atk{box-shadow:inset 0 0 0 3px rgba(227,53,13,.75)}
 .sbcard.m-def{box-shadow:inset 0 0 0 3px rgba(42,117,187,.8)}
 .sbcard.cima{outline:2px solid var(--amarelo)}
-.sbcard.deitada{transform:rotate(90deg) scale(.72)}    /* cartas em DEFESA ficam deitadas */
-.sbcard img{width:100%;height:40px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.sb-poke{width:100%;height:52px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.m-def .sb-poke{height:38px;transform:rotate(90deg)}            /* pokémon deitado na defesa */
+/* vida no canto superior DIREITO */
+.sb-vida-tag{position:absolute;top:2px;right:3px;font-size:.62rem;font-weight:900;color:#ff9d8a;
+  background:rgba(0,0,0,.5);border-radius:6px;padding:0 4px;z-index:2}
 .sb-modo-tag{position:absolute;top:2px;left:3px;font-size:.6rem;background:rgba(0,0,0,.45);
   border-radius:6px;padding:0 4px;font-weight:800;z-index:2}
-.sb-nome{font-size:.6rem;font-weight:800;color:#fff;text-align:center;line-height:1;
+.sb-nome{font-size:.58rem;font-weight:800;color:#fff;text-align:center;line-height:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:1px;text-shadow:0 1px 2px rgba(0,0,0,.6)}
-/* status principal GRANDE no meio, secundário pequeno embaixo */
-.sb-stat-grande{font-size:2rem;font-weight:900;line-height:.95;color:#fff;margin-top:auto;
+/* status principal GRANDE no meio, secundário pequeno embaixo — SEMPRE na horizontal (legível) */
+.sb-stat-grande{font-size:1.9rem;font-weight:900;line-height:.95;color:#fff;margin-top:auto;
   text-shadow:0 2px 4px rgba(0,0,0,.55)}
 .m-atk .sb-stat-grande{color:#ffcbb8}
-.m-def .sb-stat-grande{color:#bcd8ff}
-.sb-stat-peq{font-size:.7rem;font-weight:800;opacity:.85;margin-bottom:1px;
+.m-def .sb-stat-grande{color:#bcd8ff;font-size:1.4rem}
+.sb-stat-peq{font-size:.68rem;font-weight:800;opacity:.85;margin-bottom:1px;
   background:rgba(0,0,0,.32);border-radius:5px;padding:0 6px}
-.sbcard.verso{display:flex;align-items:center;justify-content:center;
+.m-def .sb-nome{font-size:.5rem}
+.m-def .sb-stat-peq{font-size:.58rem}
+/* destaque amarelo (foco) do ataque/defesa/vida na animação */
+.sb-stat-grande.foco,.sb-stat-peq.foco,.sb-vida-tag.foco{background:var(--amarelo);color:#1b1f2a;
+  border-radius:5px;box-shadow:0 0 10px var(--amarelo);padding:0 6px}
+.sbcard.verso{align-items:center;justify-content:center;
   background:repeating-linear-gradient(45deg,#5a3ea5 0 10px,#432c86 10px 20px)}
 .sbcard.verso .sb-verso-pk{width:42px;height:42px;border-radius:50%;
   background:linear-gradient(#fff 0 50%,#6a2ec7 50% 100%);border:4px solid #1b1f2a;
   box-shadow:0 0 0 4px rgba(255,255,255,.12)}
+/* botão redondo de encerrar turno (▶) na barra de cima */
+.btn-encerrar-redondo{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
+  align-self:center;background:radial-gradient(circle at 35% 30%,#8ff0a8,#2e9e3f);color:#0d2a13;
+  font-size:1.2rem;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.45);transition:transform .1s,filter .1s}
+.btn-encerrar-redondo:hover:not(:disabled){transform:scale(1.1)}
+.btn-encerrar-redondo:disabled{filter:grayscale(.7) brightness(.6);cursor:default}
+/* anel de contagem regressiva ao redor do botão redondo (auto-avanço) */
+.btn-encerrar-redondo.com-crono{position:relative;margin:6px auto 0}
+.btn-encerrar-redondo .crono{position:absolute;inset:-6px;width:auto;height:auto;margin:0;pointer-events:none}
+.btn-encerrar-redondo .crono .cr-num{display:none}
+.btn-encerrar-redondo .crono .cr-bg{stroke:rgba(0,0,0,.30)}
+.btn-encerrar-redondo .crono .cr-fg{stroke:#0d2a13}
+
+/* barra de tempo do turno na tela de jogo (Classic/Life) */
+#jogo-tempo-barra{width:100%;max-width:520px;margin:0 auto;height:4px;border-radius:3px;
+  background:rgba(0,0,0,.35);overflow:hidden}
+#jogo-tempo-barra[hidden]{display:none}
 
 /* banner grande do que aconteceu */
 #sb-banner{width:100%;max-width:640px;margin:0 auto;text-align:center;font-weight:900;
@@ -210,7 +246,6 @@ body{
 .sb-deck-lbl{font-size:.6rem;opacity:.8}
 .sb-deck-num{font-size:1.1rem;font-weight:900;color:var(--amarelo)}
 
-#sb-controles{display:flex;gap:12px;justify-content:center}
 #sb-mao{width:100%;max-width:900px;margin:0 auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
   min-height:60px;padding:6px;background:rgba(0,0,0,.2);border-radius:12px}
 .sb-maocarta{width:66px;border-radius:10px;padding:3px;cursor:pointer;position:relative;
@@ -222,44 +257,106 @@ body{
 .mc-nome{font-size:.54rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .mc-stats{font-size:.56rem;font-weight:900;color:#ffe08a}
 
-/* painel de colocação: opções à ESQUERDA, info à DIREITA */
-#sb-colocar{width:100%;max-width:640px;margin:0 auto;background:rgba(0,0,0,.42);border-radius:14px;
-  padding:14px;display:flex;gap:16px;align-items:stretch;border:1px solid rgba(255,255,255,.18)}
-.sb-colocar-esq{flex:1;display:flex;flex-direction:column;gap:8px}
-.sb-colocar-tit{font-weight:900;color:var(--amarelo)}
-.sb-opcoes{display:grid;grid-template-columns:1fr;gap:7px}
-.sb-opcao{font-size:.82rem;padding:9px;text-align:left}
+/* pop-up de colocação: carta grande à frente + opções embaixo */
+.modal-colocar-box{max-width:420px;display:flex;flex-direction:column;align-items:center;gap:14px}
+#modal-colocar-carta{display:flex;justify-content:center}
+.modal-colocar-opcoes{width:100%;display:flex;flex-direction:column;gap:8px}
+.sb-colocar-tit{font-weight:900;color:var(--amarelo);text-align:center}
+.sb-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sb-opcao{font-size:.8rem;padding:10px;text-align:center}
 .sb-opcao[data-modo="ataque"]{background:var(--vermelho)}
 .sb-opcao[data-modo="defesa"]{background:var(--azul)}
-.sb-colocar-dir{flex:0 0 150px;display:flex;align-items:center;justify-content:center}
-.sb-info-carta{width:100%;border-radius:12px;padding:8px;text-align:center;
+.sb-opcao:disabled{opacity:.4;cursor:default}
+.sb-info-carta{width:170px;border-radius:14px;padding:10px;text-align:center;
   background:linear-gradient(160deg,var(--c1,#666),var(--c2,#333));border:2px solid rgba(255,255,255,.4)}
-.sb-info-carta img{width:80px;height:70px;object-fit:contain}
-.sb-info-nome{font-weight:900;color:#fff;font-size:.9rem}
-.sb-info-tipo{font-size:.66rem;opacity:.85}
-.sb-info-stats{display:flex;gap:10px;justify-content:center;font-weight:900;margin-top:4px}
-.sb-info-stats span:first-child{color:#ffcbb8}.sb-info-stats span:last-child{color:#bcd8ff}
+.sb-info-carta.grande{width:190px}
+.sb-info-carta img{width:110px;height:96px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5))}
+.sb-info-nome{font-weight:900;color:#fff;font-size:1rem}
+.sb-info-tipo{font-size:.7rem;opacity:.85}
+.sb-info-stats{display:flex;gap:12px;justify-content:center;font-weight:900;margin-top:6px}
+.sb-info-stats span:nth-child(1){color:#ffcbb8}
+.sb-info-stats span:nth-child(2){color:#bcd8ff}
+.sb-info-stats span:nth-child(3){color:#ff9d8a}
+
+/* pop-up de fim de duelo (você venceu / perdeu) */
+.sb-fim-pop-box{max-width:360px;text-align:center}
+#sb-fim-pop-emoji{font-size:3.4rem;line-height:1}
+#sb-fim-pop-titulo{margin:6px 0 4px}
+#sb-fim-pop-titulo.venceu{color:var(--verde)}
+#sb-fim-pop-titulo.perdeu{color:var(--vermelho)}
+#sb-fim-pop-sub{opacity:.85;margin-bottom:14px}
+
+/* ===== POP-UP DE COMBATE (animação de ataque) ===== */
+#sb-combate{position:fixed;inset:0;z-index:60;background:rgba(6,9,18,.82);
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+#sb-combate[hidden]{display:none}
+.combate-box{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;max-width:640px;padding:16px}
+.combate-carta{width:150px;height:200px;position:relative}
+.combate-carta .sbcard{border-width:3px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.combate-carta .sb-poke{height:96px}
+.combate-carta .m-def .sb-poke{height:70px}
+.combate-carta .sb-stat-grande{font-size:2.6rem}
+.combate-carta .m-def .sb-stat-grande{font-size:2rem}
+.combate-carta .sb-nome{font-size:.9rem}
+.combate-carta .sb-vida-tag{font-size:.9rem}
+.combate-lp-alvo{width:150px;height:200px;border-radius:14px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:3rem;font-weight:900;color:#fff;
+  background:radial-gradient(circle,#7a1414,#3a0a0a);border:3px solid rgba(255,255,255,.35)}
+.combate-lp-alvo span{font-size:1rem;letter-spacing:2px}
+.combate-meio{min-width:130px;display:flex;flex-direction:column;align-items:center;gap:10px}
+#combate-formula{font-size:1.5rem;font-weight:900;color:#fff;text-align:center;min-height:2rem;
+  text-shadow:0 2px 6px rgba(0,0,0,.6)}
+.cb-num{color:#fff}
+.cb-x{opacity:.8}
+.cb-forte{color:#8ff0a8}
+.cb-fraco{color:#ff9d8a}
+.cb-def{color:#bcd8ff}
+.cb-dano{color:var(--amarelo);font-size:1.9rem}
+.cb-giro b{font-size:2.4rem;color:var(--amarelo)}
+#combate-coracao{font-size:2rem;font-weight:900;color:#ff5a5a;animation:cbPop .4s}
+#combate-coracao[hidden]{display:none}
+.combate-carta .sbcard.tremendo{animation:cbTremer .45s}
+.combate-carta .sbcard.destruida{filter:grayscale(1) brightness(.45)}
+@keyframes cbTremer{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@keyframes cbPop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
 
 #sb-log-box{width:100%;max-width:640px;margin:0 auto;background:rgba(0,0,0,.24);border-radius:12px;padding:6px 12px}
 #sb-log{max-height:70px;overflow-y:auto;font-size:.8rem;color:#cfe0ff;display:flex;flex-direction:column;gap:2px}
 
 .marco-vitoria{color:var(--amarelo);font-weight:900}
+/* carta de interrogação do prêmio de marco (fim de jogo) */
+#fim-marco{display:flex;justify-content:center;margin:8px 0 4px}
+#fim-marco[hidden]{display:none}
+.marco-carta{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;outline:none}
+.marco-carta-face{width:110px;height:150px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:4rem;font-weight:900;color:#fff;border:3px solid var(--amarelo);
+  background:repeating-linear-gradient(45deg,#5a3ea5 0 12px,#432c86 12px 24px);
+  box-shadow:0 0 18px rgba(255,203,5,.5);animation:pulseNivel 1.4s infinite;transition:transform .12s}
+.marco-carta:hover .marco-carta-face,.marco-carta:focus .marco-carta-face{transform:translateY(-5px) scale(1.04)}
+.marco-carta-lbl{font-size:.78rem;font-weight:800;color:var(--amarelo);text-align:center;line-height:1.2}
 
 @media(max-width:560px){
-  .sb-slot{min-height:86px;overflow:visible}
-  .sbcard img{height:30px}
+  .sb-slot.slot-atk{width:74px}
+  .sb-slot.slot-def{width:96px;height:66px}
+  .sb-grupo{gap:6px}
+  .sb-poke{height:38px}
+  .m-def .sb-poke{height:28px}
   .sb-nome{font-size:.5rem}
   .sb-stat-grande{font-size:1.5rem}
+  .m-def .sb-stat-grande{font-size:1.1rem}
   .sb-stat-peq{font-size:.6rem}
   .sb-lp-box .hp-bar{width:80px}
   .sb-maocarta{width:54px}
   .sb-maocarta img{width:40px;height:34px}
-  #sb-colocar{flex-direction:column}
-  .sb-colocar-dir{flex:none}
   #sb-topo{padding:5px 8px}
   .sb-lp{font-size:.95rem}
   .sb-deck{width:56px}
   .sb-deck-back{width:44px;height:60px}
+  .btn-encerrar-redondo{width:40px;height:40px;font-size:1rem}
+  .combate-carta{width:116px;height:154px}
+  .combate-carta .sb-poke{height:70px}
+  .combate-lp-alvo{width:116px;height:154px;font-size:2.2rem}
+  #combate-formula{font-size:1.2rem}
 }
 
 /* botões/painel da Campanha Vida */
