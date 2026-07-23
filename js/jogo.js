@@ -264,6 +264,7 @@ function iniciarBatalha(deckJogador, deckCpu, contexto){
   estado.empatesSeguidos = 0;
   estado.turnoDe = "jogador";
   estado.travado = false;
+  estado.abortado = false;
   estado.contexto = contexto;
   // modo pontos de vida
   estado.modoVida = !!contexto.modoVida;
@@ -589,6 +590,7 @@ function iniciarTurnoTimerJogo(){
 }
 
 function proximaRodada(){
+  if(estado.abortado) return;
   limparTimers();
   if(estado.modoVida){
     if(estado.hpJogador <= 0 || estado.hpCpu <= 0) return finalizar();
@@ -650,7 +652,7 @@ function escolhaCPU(carta){
 }
 
 function jogarAtributo(chave, porOponente){
-  if(estado.travado) return;
+  if(estado.abortado || estado.travado) return;
   estado.travado = true;
   pararTurnoTimerJogo();   // encerra o timer de 30s ao jogar
 
@@ -823,6 +825,7 @@ function botaoFim(cont, texto, cls, fn){
 
 let _marcoPremio = null;   // prêmio de marco de vitórias a exibir no fim
 function finalizar(empate){
+  if(estado.abortado) return;
   limparTimers();
   _marcoPremio = null;
   const ctx = estado.contexto || {tipo:"livre"};
@@ -1518,6 +1521,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   // Sair: encerra a batalha IMEDIATAMENTE (sem confirmação)
   $("#btn-sair").addEventListener("click", ()=>{
     limparTimers();
+    estado.abortado = true; estado.travado = true;   // encerra o duelo imediatamente
     const ctx = estado.contexto || {};
     if(ctx.tipo === "campanha-vida") abrirCampanhaVida();
     else if(ctx.tipo === "campanha") abrirCampanha();

@@ -34,22 +34,55 @@ function sbEfetividade(atk, def){
   return 1;
 }
 
-/* ---------- Campanha Super Battle ---------- */
+/* ---------- Campanha Super Battle — 25 níveis, cada um com sua cor temática ---------- */
+// cor = [claro, escuro] usada no verso das cartas do oponente e no ícone do nível
 const NIVEIS_SUPER = [
-  {n:1,  nome:"Aprendiz Duel", raridades:["Comum"],                 lp:100},
-  {n:2,  nome:"Duelista Rex",  raridades:["Comum","Incomum"],       lp:110},
-  {n:3,  nome:"Mago Zane",     raridades:["Incomum"],               lp:125},
-  {n:4,  nome:"Rival Kite",    raridades:["Incomum","Raro"],        lp:140},
-  {n:5,  nome:"Mestra Aki",    raridades:["Raro"],                  lp:160},
-  {n:6,  nome:"Kaiser Ryo",    raridades:["Raro","Super Raro"],     lp:185},
-  {n:7,  nome:"Sombra Yubel",  raridades:["Super Raro"],            lp:215},
-  {n:8,  nome:"Faraó Atem",    raridades:["Super Raro","Lendário"], lp:250},
-  {n:9,  nome:"Deus Obelisco", raridades:["Lendário"],              lp:290},
-  {n:10, nome:"REI DOS DUELOS",raridades:["Lendário","Lendário Supremo","Mítico"], lp:340}
+  {n:1,  nome:"Aprendiz Duel",     raridades:["Comum"],                        lp:100, cor:["#e3553d","#a02a16"]},
+  {n:2,  nome:"Duelista Rex",      raridades:["Comum"],                        lp:112, cor:["#f0902c","#b45a0c"]},
+  {n:3,  nome:"Colecionadora Mel", raridades:["Comum","Incomum"],              lp:125, cor:["#f5c518","#b38a06"]},
+  {n:4,  nome:"Escudeiro Verde",   raridades:["Incomum"],                      lp:138, cor:["#4caf50","#25702c"]},
+  {n:5,  nome:"Mago Zane",         raridades:["Incomum"],                      lp:152, cor:["#26c6a4","#0e7a63"]},
+  {n:6,  nome:"Rival Kite",        raridades:["Incomum","Raro"],               lp:167, cor:["#29b6f6","#0b6ea8"]},
+  {n:7,  nome:"Nadadora Íris",     raridades:["Raro"],                         lp:183, cor:["#3f6fe0","#1e3a94"]},
+  {n:8,  nome:"Mestra Aki",        raridades:["Raro"],                         lp:200, cor:["#8e5ce0","#4e2a91"]},
+  {n:9,  nome:"Ninja Sombra",      raridades:["Raro"],                         lp:218, cor:["#c95bd0","#722a7a"]},
+  {n:10, nome:"Kaiser Ryo",        raridades:["Raro","Super Raro"],            lp:237, cor:["#ec4899","#9b1c5c"]},
+  {n:11, nome:"Alquimista Ouro",   raridades:["Super Raro"],                   lp:257, cor:["#d4a017","#8a6208"]},
+  {n:12, nome:"Domador Esmeralda", raridades:["Super Raro"],                   lp:278, cor:["#12a37a","#06614a"]},
+  {n:13, nome:"Sombra Yubel",      raridades:["Super Raro"],                   lp:300, cor:["#6d4fd0","#2f1f78"]},
+  {n:14, nome:"Barão Índigo",      raridades:["Super Raro"],                   lp:323, cor:["#4b3fd6","#221a86"]},
+  {n:15, nome:"Cavaleiro Prata",   raridades:["Super Raro","Lendário"],        lp:347, cor:["#b8c4d4","#6a7788"]},
+  {n:16, nome:"Senhor Carmesim",   raridades:["Lendário"],                     lp:372, cor:["#d32f2f","#7a1010"]},
+  {n:17, nome:"Dama Turquesa",     raridades:["Lendário"],                     lp:398, cor:["#17b3b8","#08696c"]},
+  {n:18, nome:"Faraó Atem",        raridades:["Lendário"],                     lp:425, cor:["#e0a423","#8a5d05"]},
+  {n:19, nome:"Titã Bronze",       raridades:["Lendário"],                     lp:453, cor:["#c07a3e","#6f3f18"]},
+  {n:20, nome:"Imperatriz Safira", raridades:["Lendário"],                     lp:482, cor:["#2f6fd0","#123a80"]},
+  {n:21, nome:"Deus Obelisco",     raridades:["Lendário","Mítico"],            lp:512, cor:["#5c7fa8","#26405c"]},
+  {n:22, nome:"Deus Slifer",       raridades:["Lendário","Mítico"],            lp:545, cor:["#e14a2b","#8a1f0c"]},
+  {n:23, nome:"Deus Rá",           raridades:["Lendário","Lendário Supremo"],  lp:580, cor:["#ffd24a","#c08a00"]},
+  {n:24, nome:"Lorde do Vazio",    raridades:["Lendário Supremo","Mítico"],    lp:618, cor:["#5b3f8f","#1a1030"]},
+  {n:25, nome:"REI DOS DUELOS",    raridades:["Lendário","Lendário Supremo","Mítico"], lp:660, cor:["#ffca3a","#8a2be2"]}
 ];
 const MAX_NIVEL_SUPER = NIVEIS_SUPER.length;
-// ouro do Championship = TRIPLO do ouro das campanhas comuns
-function ouroNivelSuper(nivel){ return 3 * (40 + nivel*22); }
+// ouro do Championship = 5x o ouro da campanha Classic (mesma escada de níveis)
+function ouroNivelSuper(nivel){ return 5 * (25 + nivel*15); }
+// cores da pilha de compra do jogador — sorteada de novo a cada carta comprada
+const SB_CORES_BARALHO = [
+  ["#e3350d","#8a1a05"], ["#f5c518","#b38a06"], ["#2a75bb","#12406e"], ["#3bb54a","#1c6b26"],
+  ["#f0902c","#a8560c"], ["#8e5ce0","#4a2790"], ["#17b3b8","#0a6165"], ["#ec4899","#8f1e56"]
+];
+function sbSortearCorBaralho(){
+  sb.corBaralho = SB_CORES_BARALHO[Math.floor(Math.random()*SB_CORES_BARALHO.length)];
+}
+// encerra imediatamente o duelo em andamento (botão sair/voltar)
+function sbAbortarDuelo(){
+  sb.abortado = true; sb.fim = true; sb.travado = true; sb.selecao = null;
+  sbLimparTurnoTimer();
+  if(typeof limparTimers === "function") limparTimers();
+  ["#sb-combate","#modal-sb-colocar","#modal-sb-acao","#sb-fim-pop"].forEach(id=>{
+    const e = $(id); if(e) e.hidden = true;
+  });
+}
 const SB_LP_INICIAL = 100, SB_LP_INCREMENTO = 20;
 function custoLPSuper(){ return Math.round((progresso.lpSuper||100) * 0.8); }
 
@@ -92,8 +125,10 @@ function abrirCampanhaSuper(){
     el.className = "nivel-item " + est;
     el.disabled = est === "bloqueado";
     const tag = est==="vencido" ? "✔ vencido" : est==="atual" ? "▶ Duelar" : "🔒 bloqueado";
+    const c = info.cor || ["#5a3ea5","#432c86"];
+    el.style.setProperty("--dk1", c[0]); el.style.setProperty("--dk2", c[1]);
     el.innerHTML =
-      `<span class="nivel-num">${info.n}</span>`+
+      `<span class="nivel-num nivel-tema">${info.n}</span>`+
       `<span class="nivel-info"><b>${info.nome}</b>`+
       `<small>${info.raridades.join(" · ")}</small>`+
       `<small class="nivel-ouro">❤ ${info.lp} LP · 💰 ${ouroNivelSuper(info.n)}</small></span>`+
@@ -106,7 +141,9 @@ function abrirCampanhaSuper(){
 function iniciarSuperNivel(nivel){
   const info = NIVEIS_SUPER[nivel-1];
   sb.nivel = nivel;
-  sb.fim = false; sb.travado = false; sb.selecao = null;
+  sb.fim = false; sb.travado = false; sb.selecao = null; sb.abortado = false;
+  sb.corOp = info.cor || ["#5a3ea5","#432c86"];      // cor temática do oponente
+  sbSortearCorBaralho();                             // cor da pilha de compra do jogador
   sb.lpJog = progresso.lpSuper || 100;
   sb.lpCpu = info.lp;
   sb.lpJogMax = sb.lpJog; sb.lpCpuMax = sb.lpCpu;
@@ -133,6 +170,7 @@ function iniciarSuperNivel(nivel){
 let _sbTurnoTimer = null, _sbTurnoRestante = 60;
 function sbLimparTurnoTimer(){ clearInterval(_sbTurnoTimer); _sbTurnoTimer = null; }
 function sbIniciarTurno(quem){
+  if(sb.abortado) return;
   sbLimparTurnoTimer();
   sb.turnoDe = quem;
   sb.acoes = 3;
@@ -170,6 +208,7 @@ function sbComprar(){
   if(sb.travado || sb.turnoDe !== "jogador" || sb.acoes <= 0) return;
   if(sb.baralhoJog.length === 0){ Som.play("erro"); sbMsg("Seu baralho acabou — sem cartas para comprar."); return; }
   sb.maoJog.push(sb.baralhoJog.shift());
+  sbSortearCorBaralho();          // a pilha "troca" de carta ao comprar
   Som.play("select");
   sbLog("Você comprou uma carta.");
   sbGastarAcao();
@@ -310,7 +349,8 @@ function sbRolarNumero(el, de, para, ms){
 function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
   sb.travado = true;
   const eraVirada = !alvoSlot.cima && !alvoSlot.revelada;
-  alvoSlot.revelada = true;
+  alvoSlot.revelada = true;    // ao ser atacada, a carta vira e FICA virada p/ cima
+  atkSlot.revelada = true;     // ao atacar, a carta também se revela e fica revelada
   atkSlot.jaAtacou = true;
   sbDesenhar();
 
@@ -323,7 +363,8 @@ function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
   const novaDef = Math.max(0, defAntes - elemental);
   const danoVida = Math.max(0, elemental - defAntes);
   const destrui = danoVida >= vidaAntes && danoVida > 0;
-  const overflow = destrui ? (danoVida - vidaAntes) : 0;
+  // só cartas em DEFESA repassam o excedente aos LP; cartas em ataque não tiram LP
+  const overflow = (destrui && alvoSlot.modo === "defesa") ? (danoVida - vidaAntes) : 0;
 
   // abre o pop-up de combate com as duas cartas grandes
   $("#combate-atk").innerHTML = sbHtmlCarta(atkSlot, true);
@@ -336,16 +377,19 @@ function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
   const corElem = mult>1 ? "cb-forte" : mult<1 ? "cb-fraco" : "";
   // beat 1: ataque × multiplicador (ícone do elemento)
   setTimeout(()=>{
+    if(sb.abortado) return;
     sbFormula(`<span class="cb-num">${atkVal}</span> <span class="cb-x">×</span> <span class="${corElem}">${mult} ${sbElemIcon(atkSlot.carta.tipo1)}</span>`);
     Som.play("atributo");
   }, t);
   // beat 2: gira para o valor elemental
   setTimeout(()=>{
+    if(sb.abortado) return;
     sbFormula(`<span class="cb-giro"><b id="cb-roll">${atkVal}</b> ${sbElemIcon(atkSlot.carta.tipo1)}</span>`);
     sbRolarNumero($("#cb-roll"), atkVal, elemental, 700);
   }, t+1400);
   // beat 3: aplica na defesa; excedente na vida
   setTimeout(()=>{
+    if(sb.abortado) return;
     if(danoVida > 0){
       sbFormula(`<span class="cb-num">${elemental}</span> <span class="cb-x">−</span> <span class="cb-def">🛡️${defAntes}</span> = <b class="cb-dano">${danoVida}</b> ❤`);
     } else {
@@ -360,13 +404,15 @@ function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
   }, t+2900);
   // beat 4: destruição + excedente no LP
   setTimeout(()=>{
+    if(sb.abortado) return;
     alvoSlot.focoDef = false;
     if(destrui){
       const el = $("#combate-alvo .sbcard"); if(el){ el.classList.add("destruida"); }
       const i = campoAlvo.indexOf(alvoSlot); if(i>=0) campoAlvo.splice(i,1);
-      sbLog(`${atkSlot.carta.nome} derrotou ${alvoSlot.carta.nome}!`);
+      sbLog(`${atkSlot.carta.nome} derrotou ${alvoSlot.carta.nome}!`+(alvoSlot.modo!=="defesa"?" (carta em ataque — não tira LP)":""));
       if(overflow > 0){
         setTimeout(()=>{
+          if(sb.abortado) return;
           $("#combate-coracao").hidden = false;
           $("#combate-lp").textContent = "-" + overflow;
           if(ladoAlvo==="cpu") sb.lpCpu = Math.max(0, sb.lpCpu - overflow); else sb.lpJog = Math.max(0, sb.lpJog - overflow);
@@ -385,14 +431,16 @@ function sbExecAtaqueCarta(atkSlot, alvoSlot, campoAlvo, ladoAlvo){
 function sbExecAtaqueDireto(atkSlot, ladoAlvo){
   sb.travado = true;
   atkSlot.jaAtacou = true;
+  atkSlot.revelada = true;    // ao atacar, revela e fica revelada
   const dano = sbEfAtk(atkSlot);
   $("#combate-atk").innerHTML = sbHtmlCarta(atkSlot, true);
   $("#combate-alvo").innerHTML = `<div class="combate-lp-alvo">❤️<span>LP</span></div>`;
   sbFormula("");
   $("#combate-coracao").hidden = true;
   $("#sb-combate").hidden = false;
-  setTimeout(()=>{ sbFormula(`⚔️ <span class="cb-num">${dano}</span> ataque direto!`); Som.play("atributo"); }, 500);
+  setTimeout(()=>{ if(sb.abortado) return; sbFormula(`⚔️ <span class="cb-num">${dano}</span> ataque direto!`); Som.play("atributo"); }, 500);
   setTimeout(()=>{
+    if(sb.abortado) return;
     $("#combate-coracao").hidden = false;
     $("#combate-lp").textContent = "-" + dano;
     if(ladoAlvo==="cpu") sb.lpCpu = Math.max(0, sb.lpCpu - dano); else sb.lpJog = Math.max(0, sb.lpJog - dano);
@@ -402,6 +450,7 @@ function sbExecAtaqueDireto(atkSlot, ladoAlvo){
   }, 1800);
 }
 function sbCombateFechar(){
+  if(sb.abortado) return;
   const ov = $("#sb-combate"); if(ov) ov.hidden = true;
   sb.selecao = null;
   sb.travado = (sb.turnoDe === "cpu");
@@ -412,6 +461,7 @@ function sbCombateFechar(){
 }
 // pop-up de resultado: o jogador clica OK para ir à tela de fim
 function sbMostrarFimPop(venceu){
+  if(sb.abortado) return;
   sbLimparTurnoTimer();
   const pop = $("#sb-fim-pop"); if(!pop){ sbFim(venceu); return; }
   $("#sb-fim-pop-emoji").textContent = venceu ? "🏆" : "☠";
@@ -424,13 +474,14 @@ function sbMostrarFimPop(venceu){
   pop.hidden = false;
 }
 function sbPosAtaque(){
+  if(sb.abortado) return;
   if(sb.turnoDe === "jogador"){ sbGastarAcao(); }
-  else { sb.acoes--; sbDesenhar(); setTimeout(()=>{ if(!sb.fim) (sb.acoes>0 ? sbPassoCPU() : sbEncerrarTurno()); }, 900); }
+  else { sb.acoes--; sbDesenhar(); setTimeout(()=>{ if(!sb.fim && !sb.abortado) (sb.acoes>0 ? sbPassoCPU() : sbEncerrarTurno()); }, 900); }
 }
 
 /* ---------- IA do oponente ---------- */
 function sbPassoCPU(){
-  if(sb.fim) return;
+  if(sb.fim || sb.abortado) return;
   if(sb.acoes <= 0){ setTimeout(sbEncerrarTurno, 500); return; }
   const campo = sb.campoCpu, mao = sb.maoCpu;
   const atacantes = campo.filter(s=>s.modo==="ataque" && !s.jaAtacou);
@@ -536,7 +587,11 @@ function sbMsg(txt){ const m = $("#sb-msg-txt"); if(m) m.textContent = txt; }
 
 function sbHtmlCarta(s, meu){
   const visivel = meu || s.cima || s.revelada;
-  if(!visivel) return `<div class="sbcard verso"><div class="sb-verso-pk"></div></div>`;
+  // verso na cor temática do oponente daquele nível
+  if(!visivel){
+    const c = sb.corOp || ["#5a3ea5","#432c86"];
+    return `<div class="sbcard verso" style="--dk1:${c[0]};--dk2:${c[1]}"><div class="sb-verso-pk"></div></div>`;
+  }
   const p = s.carta, c1 = corTipo(p.tipo1), c2 = corTipo(p.tipo2 || p.tipo1);
   const ehAtaque = s.modo === "ataque";
   const modo = ehAtaque ? "m-atk" : "m-def deitada";   // defesa fica deitada (só o pokémon gira)
@@ -628,6 +683,9 @@ function sbDesenhar(){
   const deck = $("#sb-deck-jog");
   if(deck){
     deck.className = "sb-deck" + (podeComprar ? " ativo" : "") + (sb.baralhoJog.length===0 ? " vazio" : "");
+    const cb = sb.corBaralho || SB_CORES_BARALHO[0];
+    deck.style.setProperty("--dk1", cb[0]);
+    deck.style.setProperty("--dk2", cb[1]);
     deck.querySelector(".sb-deck-num").textContent = sb.baralhoJog.length;
     deck.onclick = podeComprar ? sbComprar : null;
   }
@@ -697,7 +755,7 @@ function comprarLPSuper(){
 document.addEventListener("DOMContentLoaded", ()=>{
   const bt = $("#btn-campanha-super"); if(bt) bt.addEventListener("click", abrirCampanhaSuper);
   const be = $("#btn-sb-encerrar"); if(be) be.addEventListener("click", ()=>{ if(!sb.travado && sb.turnoDe==="jogador") sbEncerrarTurno(); });
-  const bs = $("#btn-sb-sair"); if(bs) bs.addEventListener("click", ()=>{ sb.fim=true; sbLimparTurnoTimer(); limparTimers(); abrirCampanhaSuper(); });
+  const bs = $("#btn-sb-sair"); if(bs) bs.addEventListener("click", ()=>{ sbAbortarDuelo(); abrirCampanhaSuper(); });
   const bd = $("#sb-btn-direto"); if(bd) bd.addEventListener("click", sbAtaqueDireto);
   const bl = $("#btn-comprar-lp"); if(bl) bl.addEventListener("click", comprarLPSuper);
   const bcancel = $("#sb-colocar-cancelar"); if(bcancel) bcancel.addEventListener("click", sbFecharModalColocar);
