@@ -79,7 +79,8 @@ function sbAbortarDuelo(){
   sb.abortado = true; sb.fim = true; sb.travado = true; sb.selecao = null;
   sbLimparTurnoTimer();
   if(typeof limparTimers === "function") limparTimers();
-  ["#sb-combate","#modal-sb-colocar","#modal-sb-acao","#sb-fim-pop","#sb-compra","#modal-sb-rodada"].forEach(id=>{
+  sbLimparCpuTimer();
+  ["#sb-combate","#modal-sb-colocar","#modal-sb-acao","#sb-fim-pop","#sb-compra"].forEach(id=>{
     const e = $(id); if(e) e.hidden = true;
   });
 }
@@ -174,6 +175,8 @@ function iniciarSuperNivel(nivel){
   sb.fim = false; sb.travado = false; sb.selecao = null; sb.abortado = false;
   sb.rodadaDe = {jogador:0, cpu:0};                   // nº de turnos de cada lado (ataque só a partir do 2º)
   sb.corOp = corCampeonato("super", nivel);           // cor das cartas do campeonato
+  const gCamp = campeonatoDoNivel("super", nivel);
+  sb.campNome = gCamp ? gCamp.nome : "";              // nome do campeonato p/ o topo
   sbSortearCorBaralho();                             // cor da pilha de compra do jogador
   sb.lpJog = progresso.lpSuper || 100;
   sb.lpCpu = info.lp;
@@ -198,32 +201,26 @@ function iniciarSuperNivel(nivel){
 }
 
 /* ---------- Controle de turno ---------- */
-let _sbTurnoTimer = null, _sbTurnoRestante = 60;
+let _sbTurnoTimer = null, _sbTurnoRestante = 60, _sbCpuTimer = null;
 function sbLimparTurnoTimer(){ clearInterval(_sbTurnoTimer); _sbTurnoTimer = null; }
+function sbLimparCpuTimer(){ clearTimeout(_sbCpuTimer); _sbCpuTimer = null; }
 // ataque liberado só a partir do 2º turno de cada lado
 function sbPodeAtacar(quem){ return (sb.rodadaDe && sb.rodadaDe[quem||sb.turnoDe] || 0) >= 2; }
+// ações por rodada (ciclo de 10 rodadas em looping)
+const SB_ACOES_CICLO = [2,3,3,3,4,4,4,3,3,5];
+function sbAcoesDaRodada(r){ const n = SB_ACOES_CICLO.length; return SB_ACOES_CICLO[((r-1)%n + n) % n]; }
 function sbIniciarTurno(quem){
-  if(sb.abortado) return;
-  sbLimparTurnoTimer();
-  const mr = $("#modal-sb-rodada"); if(mr) mr.hidden = true;   // fecha a pergunta de finalizar
+  if(sb.fim || sb.abortado) return;
+  sbLimparTurnoTimer(); sbLimparCpuTimer();
   sb.turnoDe = quem;
   if(sb.rodadaDe) sb.rodadaDe[quem] = (sb.rodadaDe[quem] || 0) + 1;
-  sb.acoes = 3;
+  sb.acoes = sbAcoesDaRodada(sb.rodadaDe[quem]);
+  sb.acoesMax = sb.acoes;
   sb.selecao = null;
   sb.travado = quem === "cpu";
   (quem === "jogador" ? sb.campoJog : sb.campoCpu).forEach(s=>s.jaAtacou = false);
-  if(quem === "jogador"){
-    // snapshot do início do turno para o "cancelar ações" (desfazer)
-    sb.snapshotTurno = {
-      campoJog: sb.campoJog.map(s=>({...s})),
-      campoCpu: sb.campoCpu.map(s=>({...s})),
-      maoJog: sb.maoJog.slice(),
-      lpJog: sb.lpJog, lpCpu: sb.lpCpu
-    };
-    sb.compradasNoTurno = [];   // cartas compradas neste turno (não são desfeitas)
-  }
   sbDesenhar();
-  if(quem === "cpu"){ setTimeout(sbPassoCPU, 800); return; }
+  if(quem === "cpu"){ sbAgendarCPU(); return; }   // oponente: barra de 10s e joga em 2–6s
   // jogador: 60s por turno, senão perde a vez
   _sbTurnoRestante = 60;
   const el = $("#sb-timer");
@@ -240,36 +237,11 @@ function sbIniciarTurno(quem){
 }
 function sbGastarAcao(){
   sb.acoes--;
-  if(sb.acoes <= 0){ sb.selecao = null; sbDesenhar(); setTimeout(()=>{ if(!sb.fim && !sb.abortado) sbPerguntarFinalizar(); }, 500); }
-  else sbDesenhar();
-}
-// pergunta "Finalizar rodada?" quando o jogador usou as 3 ações
-function sbPerguntarFinalizar(){
-  const m = $("#modal-sb-rodada"); if(!m){ sbEncerrarTurno(); return; }
-  const draws = sb.compradasNoTurno ? sb.compradasNoTurno.length : 0;
-  const bc = $("#sb-rodada-cancelar");
-  if(bc) bc.disabled = !sb.snapshotTurno || draws >= 3;   // se as 3 ações foram compras, nada a desfazer
-  m.hidden = false;
-}
-// desfaz as ações do turno (posicionar/atacar/sacrificar/descartar) mantendo as cartas compradas
-function sbCancelarAcoes(){
-  const m = $("#modal-sb-rodada"); if(m) m.hidden = true;
-  const snap = sb.snapshotTurno; if(!snap) return;
-  const compradas = (sb.compradasNoTurno || []).slice();
-  sb.campoJog = snap.campoJog.map(s=>({...s}));
-  sb.campoCpu = snap.campoCpu.map(s=>({...s}));
-  sb.lpJog = snap.lpJog; sb.lpCpu = snap.lpCpu;
-  sb.maoJog = snap.maoJog.slice().concat(compradas);   // mão inicial + cartas compradas
-  sb.acoes = Math.max(0, 3 - compradas.length);          // ações de compra continuam gastas
-  sb.selecao = null; sb.travado = false;
-  Som.play("select");
-  sbLog("↩️ Ações canceladas — cartas compradas mantidas.");
-  sbDesenhar();
-  if(sb.acoes <= 0) sbPerguntarFinalizar();               // só sobraram compras: volta a perguntar
+  sb.selecao = null;
+  sbDesenhar();   // sem ações -> o botão ▶ do topo começa a piscar (o jogador encerra o turno)
 }
 function sbEncerrarTurno(){
-  if(sb.fim) return;
-  const m = $("#modal-sb-rodada"); if(m) m.hidden = true;
+  if(sb.fim || sb.abortado) return;
   sbIniciarTurno(sb.turnoDe === "jogador" ? "cpu" : "jogador");
 }
 
@@ -283,7 +255,6 @@ function sbComprar(){
   Som.play("select");
   sbAnimarCompra(carta, ()=>{
     sb.maoJog.push(carta);
-    (sb.compradasNoTurno || (sb.compradasNoTurno=[])).push(carta);
     sb.travado = false;
     sbLog(`Você comprou ${carta.nome}.`);
     sbGastarAcao();
@@ -562,8 +533,13 @@ function sbCombateFechar(){
   sb.selecao = null;
   sb.travado = (sb.turnoDe === "cpu");
   sbDesenhar();
-  // LP zerou: espera 1s e mostra o pop-up "você venceu / perdeu" com OK antes de mudar de tela
-  if(sb.lpCpu <= 0 || sb.lpJog <= 0){ sb.travado = true; sb.fim = true; setTimeout(()=>sbMostrarFimPop(sb.lpCpu <= 0), 1000); return; }
+  // LP zerou: encerra TUDO (timers/IA) e mostra o pop-up de resultado após 1s
+  if(sb.lpCpu <= 0 || sb.lpJog <= 0){
+    sb.travado = true; sb.fim = true;
+    sbLimparTurnoTimer(); sbLimparCpuTimer();
+    setTimeout(()=>sbMostrarFimPop(sb.lpCpu <= 0), 1000);
+    return;
+  }
   sbPosAtaque();
 }
 // pop-up de resultado: o jogador clica OK para ir à tela de fim
@@ -581,9 +557,33 @@ function sbMostrarFimPop(venceu){
   pop.hidden = false;
 }
 function sbPosAtaque(){
-  if(sb.abortado) return;
+  if(sb.fim || sb.abortado) return;
   if(sb.turnoDe === "jogador"){ sbGastarAcao(); }
-  else { sb.acoes--; sbDesenhar(); setTimeout(()=>{ if(!sb.fim && !sb.abortado) (sb.acoes>0 ? sbPassoCPU() : sbEncerrarTurno()); }, 900); }
+  else { sb.acoes--; sbDesenhar(); if(sb.acoes>0) sbAgendarCPU(); else sbAgendarFimTurnoCPU(); }
+}
+// barra de 10s do oponente + próxima jogada da CPU em 2–6s (todos os passos)
+function sbAgendarCPU(){
+  if(sb.fim || sb.abortado) return;
+  sbLimparCpuTimer();
+  sbBarraCpuIniciar();
+  const delay = 2000 + Math.random()*4000;   // 2 a 6 segundos "pensando"
+  _sbCpuTimer = setTimeout(()=>{ if(!sb.fim && !sb.abortado) sbPassoCPU(); }, delay);
+}
+function sbAgendarFimTurnoCPU(){
+  if(sb.fim || sb.abortado) return;
+  sbLimparCpuTimer();
+  _sbCpuTimer = setTimeout(()=>{ if(!sb.fim && !sb.abortado) sbEncerrarTurno(); }, 600);
+}
+// barra do oponente: escala de 10s, drenando (a CPU joga antes de esvaziar)
+function sbBarraCpuIniciar(){
+  const barra = $("#sb-tempo-fill");
+  if(!barra) return;
+  barra.style.transition = "none";
+  barra.style.width = "100%";
+  barra.className = "sb-tempo-fill amarelo";
+  void barra.getBoundingClientRect();
+  barra.style.transition = "width 10s linear";
+  barra.style.width = "0%";
 }
 
 /* ---------- IA do oponente ---------- */
@@ -606,11 +606,11 @@ function sbCpuSacrificar(sacr, alvo){
   Som.play("vencerRodada");
   sb.acoes--;
   sbDesenhar();
-  setTimeout(()=>{ alvo.focoAtk=false; alvo.focoDef=false; if(!sb.fim && !sb.abortado) (sb.acoes>0 ? sbPassoCPU() : sbEncerrarTurno()); }, 1000);
+  setTimeout(()=>{ alvo.focoAtk=false; alvo.focoDef=false; if(!sb.fim && !sb.abortado) (sb.acoes>0 ? sbAgendarCPU() : sbAgendarFimTurnoCPU()); }, 1000);
 }
 function sbPassoCPU(){
   if(sb.fim || sb.abortado) return;
-  if(sb.acoes <= 0){ setTimeout(sbEncerrarTurno, 500); return; }
+  if(sb.acoes <= 0){ sbAgendarFimTurnoCPU(); return; }
   const campo = sb.campoCpu, mao = sb.maoCpu;
   const atacantes = campo.filter(s=>s.modo==="ataque" && !s.jaAtacou);
   const defensores = campo.filter(s=>s.modo==="defesa");
@@ -670,7 +670,7 @@ function sbPassoCPU(){
     Som.play("select");
     sbDesenhar();
     sbLimparEntrando(novoCpu);
-    return void setTimeout(sbPassoCPU, 1100);
+    return void (sb.acoes>0 ? sbAgendarCPU() : sbAgendarFimTurnoCPU());
   }
   // 3) comprar
   if(sb.baralhoCpu.length && mao.length < 6){
@@ -678,16 +678,17 @@ function sbPassoCPU(){
     sbLog("Oponente comprou uma carta.");
     sb.acoes--;
     sbDesenhar();
-    return void setTimeout(sbPassoCPU, 700);
+    return void (sb.acoes>0 ? sbAgendarCPU() : sbAgendarFimTurnoCPU());
   }
   // nada a fazer
-  setTimeout(sbEncerrarTurno, 500);
+  sbAgendarFimTurnoCPU();
 }
 
 /* ---------- Fim ---------- */
 function sbFim(venceu){
   sb.fim = true; sb.travado = true;
-  sbLimparTurnoTimer();
+  sbLimparTurnoTimer(); sbLimparCpuTimer();
+  if(typeof limparTimers === "function") limparTimers();   // mata qualquer crono remanescente
   const info = NIVEIS_SUPER[sb.nivel-1];
   mostrarTela("tela-fim");
   const t = $("#fim-titulo"), s = $("#fim-sub"), acoes = $("#fim-acoes");
@@ -720,9 +721,9 @@ function sbFim(venceu){
   botaoFim(acoes, "↺ Duelar de novo", "btn-grande", ()=>iniciarSuperNivel(sb.nivel));
   botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
   botaoFim(acoes, "🃏 Campeonato", "btn-sec", ()=>abrirCampanhaSuper());
-  const host = $("#fim-crono");
-  host.innerHTML = htmlCrono(SEGUNDOS_TIMER);
-  _fimTimer = animarCrono(host, SEGUNDOS_TIMER, ()=>{ limparTimers(); abrirCampanhaSuper(); });
+  // sem auto-avanço: o jogador escolhe um botão (evita timer/sons remanescentes)
+  const host = $("#fim-crono"); if(host) host.innerHTML = "";
+  const cbox = document.querySelector(".fim-crono-box"); if(cbox) cbox.style.display = "none";
   if(venceu) mostrarMarcoNoFim(marco);
 }
 
@@ -796,9 +797,12 @@ function sbSlotEl(slot, meu, atacando, tipoSlot){
 
 function sbDesenhar(){
   // placar
+  const cn = $("#sb-camp-nome"); if(cn) cn.textContent = sb.campNome ? `🏆 ${sb.campNome}` : "";
   $("#sb-titulo").textContent = `Nível ${sb.nivel} · ${sb.nomeOp}`;
   $("#sb-turno").textContent = sb.fim ? "" : (sb.turnoDe === "jogador" ? "SEU TURNO" : "TURNO DO OPONENTE");
-  $("#sb-acoes").textContent = sb.turnoDe === "jogador" && !sb.fim ? `Ações: ${sb.acoes}/3` : "";
+  const rn = $("#sb-rodada-num");
+  if(rn) rn.textContent = sb.fim ? "" : `Rodada ${sb.rodadaDe ? (sb.rodadaDe[sb.turnoDe]||1) : 1}`;
+  $("#sb-acoes").textContent = sb.turnoDe === "jogador" && !sb.fim ? `Ações: ${Math.max(0,sb.acoes)}/${sb.acoesMax||sb.acoes}` : "";
   $("#sb-nome-cpu").textContent = sb.nomeOp || "Oponente";
   $("#sb-avatar-cpu").textContent = sb.avatarOp;
   $("#sb-avatar-jog").textContent = progresso.foto || "🧑";
@@ -840,7 +844,12 @@ function sbDesenhar(){
     deck.querySelector(".sb-deck-num").textContent = sb.baralhoJog.length;
     deck.onclick = podeComprar ? sbComprar : null;
   }
-  $("#btn-sb-encerrar").disabled = sb.travado || sb.turnoDe!=="jogador";
+  const bEnc = $("#btn-sb-encerrar");
+  if(bEnc){
+    bEnc.disabled = sb.travado || sb.turnoDe!=="jogador" || sb.fim;
+    // sem ações restantes -> pisca para o jogador encerrar a rodada no botão do topo
+    bEnc.classList.toggle("piscando", sb.turnoDe==="jogador" && !sb.fim && !sb.travado && sb.acoes<=0);
+  }
   const tm = $("#sb-timer"); if(tm) tm.style.visibility = (sb.turnoDe==="jogador" && !sb.fim) ? "visible" : "hidden";
 
   // botão de ataque direto
@@ -849,7 +858,9 @@ function sbDesenhar(){
 
   if(!sb.selecao || sb.selecao.tipo === "colocar"){
     sbMsg(sb.turnoDe==="jogador" && !sb.fim
-      ? "Seu turno: compre no baralho, coloque cartas ou ataque. Você tem 3 ações."
+      ? (sb.acoes>0
+          ? `Seu turno: compre, coloque cartas ou ataque. Você tem ${sb.acoes} ${sb.acoes===1?"ação":"ações"}.`
+          : "Sem ações — toque no ▶ (piscando) para encerrar a rodada.")
       : (sb.fim ? "" : "O oponente está jogando..."));
   }
 }
@@ -880,6 +891,7 @@ function sbFecharModalColocar(){ const m = $("#modal-sb-colocar"); if(m) m.hidde
 function sbAtualizarBarraTempo(){
   const barra = $("#sb-tempo-fill");
   if(!barra) return;
+  barra.style.transition = "width 1s linear";   // (a barra da CPU usa 10s inline; restaura aqui)
   const pct = Math.max(0, Math.min(100, (_sbTurnoRestante/60)*100));
   barra.style.width = pct + "%";
   barra.className = "sb-tempo-fill " + (_sbTurnoRestante<=10 ? "vermelho" : _sbTurnoRestante<=25 ? "amarelo" : "verde");
@@ -913,8 +925,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const bl = $("#btn-comprar-lp"); if(bl) bl.addEventListener("click", comprarLPSuper);
   const bcancel = $("#sb-colocar-cancelar"); if(bcancel) bcancel.addEventListener("click", sbFecharModalColocar);
   const bok = $("#sb-fim-pop-ok"); if(bok) bok.addEventListener("click", ()=>{ const p=$("#sb-fim-pop"); if(p) p.hidden=true; sbFim(sb.lpCpu <= 0); });
-  const bRod = $("#sb-rodada-ok"); if(bRod) bRod.addEventListener("click", ()=>{ const m=$("#modal-sb-rodada"); if(m) m.hidden=true; sbEncerrarTurno(); });
-  const bRodC = $("#sb-rodada-cancelar"); if(bRodC) bRodC.addEventListener("click", ()=>{ if(!bRodC.disabled) sbCancelarAcoes(); });
   // menu da carta no campo (atacar / descartar / sacrificar)
   const bAcCancel = $("#sb-acao-cancelar"); if(bAcCancel) bAcCancel.addEventListener("click", sbFecharModalAcao);
   const mAcao = $("#modal-sb-acao"); if(mAcao) mAcao.addEventListener("click", e=>{ if(e.target.id==="modal-sb-acao") sbFecharModalAcao(); });

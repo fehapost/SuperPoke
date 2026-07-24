@@ -225,8 +225,10 @@ body{
 .sb-lp-box .hp-bar{display:block;width:120px}
 .sb-mao-info{font-size:.66rem;opacity:.8}
 .sb-centro{text-align:center;display:flex;flex-direction:column;gap:2px;font-weight:700;min-width:0}
-#sb-titulo{font-size:.9rem}
-#sb-turno{font-weight:900;color:var(--amarelo);font-size:.85rem}
+#sb-camp-nome{font-size:.82rem;font-weight:900;color:var(--amarelo);letter-spacing:.5px}
+#sb-titulo{font-size:.82rem;opacity:.85}
+#sb-turno{font-weight:900;color:#fff;font-size:.85rem}
+#sb-rodada-num{font-size:.78rem;font-weight:800;color:#8fd0ff}
 #sb-acoes{font-size:.8rem;color:#8ff0a8}
 
 .sb-campo-rot{width:100%;text-align:center;font-size:.66rem;letter-spacing:1px;opacity:.6;text-transform:uppercase}
@@ -305,6 +307,13 @@ body{
   font-size:1.2rem;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.45);transition:transform .1s,filter .1s}
 .btn-encerrar-redondo:hover:not(:disabled){transform:scale(1.1)}
 .btn-encerrar-redondo:disabled{filter:grayscale(.7) brightness(.6);cursor:default}
+/* pisca quando as ações acabam, chamando o jogador para encerrar a rodada */
+.btn-encerrar-redondo.piscando{animation:sbPisca .7s ease-in-out infinite;
+  box-shadow:0 0 0 0 rgba(143,240,168,.7)}
+@keyframes sbPisca{
+  0%,100%{transform:scale(1);box-shadow:0 0 6px 2px rgba(143,240,168,.6)}
+  50%    {transform:scale(1.16);box-shadow:0 0 16px 7px rgba(143,240,168,.95)}
+}
 /* anel de contagem regressiva ao redor do botão redondo (auto-avanço) */
 .btn-encerrar-redondo.com-crono{position:relative;margin:6px auto 0}
 .btn-encerrar-redondo .crono{position:absolute;inset:-6px;width:auto;height:auto;margin:0;pointer-events:none}

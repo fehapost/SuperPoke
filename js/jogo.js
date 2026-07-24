@@ -686,6 +686,19 @@ function pararTurnoTimerJogo(){
   if(_turnoTimer){ clearInterval(_turnoTimer); _turnoTimer = null; }
   const barra = $("#jogo-tempo-barra"); if(barra) barra.hidden = true;
 }
+// barra do OPONENTE (10s) — a IA joga em 2–6s (todos os modos por turno)
+function iniciarTurnoTimerOponente(){
+  pararTurnoTimerJogo();
+  const barra = $("#jogo-tempo-barra"), fill = $("#jogo-tempo-fill");
+  if(!barra || !fill) return;
+  barra.hidden = false;
+  fill.style.transition = "none";
+  fill.style.width = "100%";
+  fill.className = "sb-tempo-fill amarelo";
+  void fill.getBoundingClientRect();
+  fill.style.transition = "width 10s linear";
+  fill.style.width = "0%";
+}
 function iniciarTurnoTimerJogo(){
   pararTurnoTimerJogo();
   const barra = $("#jogo-tempo-barra"), fill = $("#jogo-tempo-fill");
@@ -743,7 +756,9 @@ function proximaRodada(){
     iniciarTurnoTimerJogo();   // 30s para escolher um atributo
   } else {
     $("#turno-aviso").textContent = "🤖 O OPONENTE ESTÁ PENSANDO...";
-    setTimeout(()=>jogarAtributo(escolhaCPU(seu), true), 1200);
+    iniciarTurnoTimerOponente();                       // barra de 10s do oponente
+    const delay = 2000 + Math.random()*4000;           // joga em 2 a 6 segundos
+    setTimeout(()=>{ if(!estado.abortado && estado.turnoDe==="cpu") jogarAtributo(escolhaCPU(seu), true); }, delay);
   }
 }
 
@@ -1062,6 +1077,7 @@ function finalizar(empate){
   }
 
   // cronômetro circular → auto-avança
+  const cbox = document.querySelector(".fim-crono-box"); if(cbox) cbox.style.display = "";   // (o Championship esconde)
   const host = $("#fim-crono");
   host.innerHTML = htmlCrono(SEGUNDOS_TIMER);
   _fimTimer = animarCrono(host, SEGUNDOS_TIMER, ()=>{ limparTimers(); autoAvancar(); });
