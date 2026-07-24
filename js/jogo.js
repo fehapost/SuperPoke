@@ -311,17 +311,23 @@ function totalDistintas(){ return new Set(progresso.owned).size; }
 const $ = sel => document.querySelector(sel);
 let _transTimer = null;
 function mostrarTela(id){
-  document.querySelectorAll(".tela").forEach(t=>t.classList.remove("ativa"));
-  const alvo = $("#"+id); if(alvo) alvo.classList.add("ativa");
-  tocarTransicao();   // efeito rápido de pokébola + luz (cosmético, não bloqueia)
+  // limpa das outras (a classe fica até a próxima troca, sem re-fade)
+  document.querySelectorAll(".tela").forEach(t=>t.classList.remove("ativa","entrando"));
+  const alvo = $("#"+id);
+  if(alvo){
+    alvo.classList.add("ativa");
+    tocarTransicao();                    // pokébola desliza + véu com blur
+    void alvo.offsetWidth;               // reinicia a animação de entrada
+    alvo.classList.add("entrando");      // a tela surge com fade + saindo do blur (fill both)
+  }
 }
-// pokébola fecha/abre + fade com luz — rápido e sobre a tela nova
+// pokébola deslizando suavemente de um lado ao outro (cosmético, não bloqueia)
 function tocarTransicao(){
   const t = $("#transicao"); if(!t) return;
   t.classList.remove("rodando"); void t.offsetWidth;   // reinicia a animação
   t.classList.add("rodando");
   clearTimeout(_transTimer);
-  _transTimer = setTimeout(()=>t.classList.remove("rodando"), 720);
+  _transTimer = setTimeout(()=>t.classList.remove("rodando"), 820);
 }
 function embaralhar(arr){
   const a = arr.slice();

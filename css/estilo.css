@@ -20,35 +20,45 @@ body{
 }
 #app{width:100%;max-width:960px;position:relative}
 
-/* ===== Transição de tela: pokébola fecha/abre + luz ===== */
+/* ===== Transição de tela: pokébola desliza + véu com blur suave ===== */
 #transicao{position:fixed;inset:0;z-index:120;pointer-events:none;overflow:hidden;display:none}
 #transicao.rodando{display:block}
-.trans-top,.trans-bot{position:absolute;left:0;width:100%;height:50%;transform:scaleY(0)}
-.trans-top{top:0;transform-origin:top;background:linear-gradient(#e3350d,#a5281c)}
-.trans-bot{bottom:0;transform-origin:bottom;background:linear-gradient(#f5f5f5,#d7dbe2)}
-#transicao.rodando .trans-top{animation:transTop .72s ease-in-out}
-#transicao.rodando .trans-bot{animation:transBot .72s ease-in-out}
-.trans-ball{position:absolute;top:50%;left:50%;width:120px;height:120px;border-radius:50%;
-  transform:translate(-50%,-50%) scale(0);opacity:0;
+/* véu sutil que dá o "blur" por trás enquanto a bola passa */
+.trans-veu{position:absolute;inset:0;opacity:0;background:rgba(12,16,28,.28);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+#transicao.rodando .trans-veu{animation:transVeu .8s ease-in-out both}
+/* pokébola pequena atravessando suavemente da esquerda p/ a direita */
+.trans-ball{position:absolute;top:50%;left:-90px;width:66px;height:66px;border-radius:50%;
+  transform:translateY(-50%);opacity:0;
   background:linear-gradient(#e3350d 0 46%,#1b1f2a 46% 54%,#f5f5f5 54% 100%);
-  border:6px solid #1b1f2a;box-shadow:0 0 30px rgba(0,0,0,.5)}
-.trans-ball-btn{position:absolute;top:50%;left:50%;width:34px;height:34px;transform:translate(-50%,-50%);
-  border-radius:50%;background:#fff;border:6px solid #1b1f2a}
-#transicao.rodando .trans-ball{animation:transBall .72s ease-in-out}
-.trans-luz{position:absolute;top:0;left:-40%;width:40%;height:100%;opacity:0;
-  background:linear-gradient(100deg,transparent,rgba(255,255,255,.85),transparent);filter:blur(4px)}
-#transicao.rodando .trans-luz{animation:transLuz .72s ease-out}
-@keyframes transTop{0%{transform:scaleY(0)}40%{transform:scaleY(1)}60%{transform:scaleY(1)}100%{transform:scaleY(0)}}
-@keyframes transBot{0%{transform:scaleY(0)}40%{transform:scaleY(1)}60%{transform:scaleY(1)}100%{transform:scaleY(0)}}
-@keyframes transBall{0%{transform:translate(-50%,-50%) scale(0) rotate(0);opacity:0}
-  35%{transform:translate(-50%,-50%) scale(1) rotate(180deg);opacity:1}
-  60%{transform:translate(-50%,-50%) scale(1) rotate(360deg);opacity:1}
-  100%{transform:translate(-50%,-50%) scale(0) rotate(540deg);opacity:0}}
-@keyframes transLuz{0%{left:-40%;opacity:0}30%{opacity:1}100%{left:120%;opacity:0}}
+  border:4px solid #1b1f2a;box-shadow:0 4px 18px rgba(0,0,0,.4),0 0 22px rgba(255,255,255,.35)}
+.trans-ball-btn{position:absolute;top:50%;left:50%;width:20px;height:20px;transform:translate(-50%,-50%);
+  border-radius:50%;background:#fff;border:4px solid #1b1f2a}
+#transicao.rodando .trans-ball{animation:transDesliza .8s cubic-bezier(.35,0,.3,1) both}
+@keyframes transVeu{0%{opacity:0}35%{opacity:1}70%{opacity:1}100%{opacity:0}}
+@keyframes transDesliza{
+  0%{left:-90px;opacity:0;transform:translateY(-50%) rotate(0)}
+  20%{opacity:1}
+  80%{opacity:1}
+  100%{left:calc(100% + 20px);opacity:0;transform:translateY(-50%) rotate(540deg)}
+}
+/* a tela nova entra com fade + saindo do blur, DEPOIS da bola passar */
+.tela.entrando{animation:telaEntra .62s ease both}
+@keyframes telaEntra{
+  0%{opacity:.15;filter:blur(10px)}
+  45%{opacity:.35;filter:blur(9px)}
+  100%{opacity:1;filter:blur(0)}
+}
+@media (prefers-reduced-motion:reduce){
+  #transicao{display:none!important}
+  .tela.entrando{animation:none}
+}
 
 /* --- Telas --- */
-.tela{display:none;animation:fade .3s ease}
+.tela{display:none}
 .tela.ativa{display:flex;flex-direction:column;align-items:center;gap:18px}
+/* entrada padrão da tela (sem transição JS, ex.: reduced-motion) */
+.tela.ativa:not(.entrando){animation:fade .3s ease}
 @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* --- Botões --- */
