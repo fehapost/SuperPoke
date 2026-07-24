@@ -79,7 +79,7 @@ function sbAbortarDuelo(){
   sb.abortado = true; sb.fim = true; sb.travado = true; sb.selecao = null;
   sbLimparTurnoTimer();
   if(typeof limparTimers === "function") limparTimers();
-  ["#sb-combate","#modal-sb-colocar","#modal-sb-acao","#sb-fim-pop"].forEach(id=>{
+  ["#sb-combate","#modal-sb-colocar","#modal-sb-acao","#sb-fim-pop","#sb-compra","#modal-sb-rodada"].forEach(id=>{
     const e = $(id); if(e) e.hidden = true;
   });
 }
@@ -142,6 +142,7 @@ function iniciarSuperNivel(nivel){
   const info = NIVEIS_SUPER[nivel-1];
   sb.nivel = nivel;
   sb.fim = false; sb.travado = false; sb.selecao = null; sb.abortado = false;
+  sb.rodadaDe = {jogador:0, cpu:0};                   // nº de turnos de cada lado (ataque só a partir do 2º)
   sb.corOp = info.cor || ["#5a3ea5","#432c86"];      // cor temática do oponente
   sbSortearCorBaralho();                             // cor da pilha de compra do jogador
   sb.lpJog = progresso.lpSuper || 100;
@@ -169,10 +170,14 @@ function iniciarSuperNivel(nivel){
 /* ---------- Controle de turno ---------- */
 let _sbTurnoTimer = null, _sbTurnoRestante = 60;
 function sbLimparTurnoTimer(){ clearInterval(_sbTurnoTimer); _sbTurnoTimer = null; }
+// ataque liberado só a partir do 2º turno de cada lado
+function sbPodeAtacar(quem){ return (sb.rodadaDe && sb.rodadaDe[quem||sb.turnoDe] || 0) >= 2; }
 function sbIniciarTurno(quem){
   if(sb.abortado) return;
   sbLimparTurnoTimer();
+  const mr = $("#modal-sb-rodada"); if(mr) mr.hidden = true;   // fecha a pergunta de finalizar
   sb.turnoDe = quem;
+  if(sb.rodadaDe) sb.rodadaDe[quem] = (sb.rodadaDe[quem] || 0) + 1;
   sb.acoes = 3;
   sb.selecao = null;
   sb.travado = quem === "cpu";
@@ -195,11 +200,17 @@ function sbIniciarTurno(quem){
 }
 function sbGastarAcao(){
   sb.acoes--;
-  if(sb.acoes <= 0){ sb.selecao = null; sbDesenhar(); setTimeout(()=>{ if(!sb.fim) sbEncerrarTurno(); }, 700); }
+  if(sb.acoes <= 0){ sb.selecao = null; sbDesenhar(); setTimeout(()=>{ if(!sb.fim && !sb.abortado) sbPerguntarFinalizar(); }, 500); }
   else sbDesenhar();
+}
+// pergunta "Finalizar rodada?" quando o jogador usou as 3 ações
+function sbPerguntarFinalizar(){
+  const m = $("#modal-sb-rodada"); if(!m){ sbEncerrarTurno(); return; }
+  m.hidden = false;
 }
 function sbEncerrarTurno(){
   if(sb.fim) return;
+  const m = $("#modal-sb-rodada"); if(m) m.hidden = true;
   sbIniciarTurno(sb.turnoDe === "jogador" ? "cpu" : "jogador");
 }
 
@@ -207,11 +218,43 @@ function sbEncerrarTurno(){
 function sbComprar(){
   if(sb.travado || sb.turnoDe !== "jogador" || sb.acoes <= 0) return;
   if(sb.baralhoJog.length === 0){ Som.play("erro"); sbMsg("Seu baralho acabou — sem cartas para comprar."); return; }
-  sb.maoJog.push(sb.baralhoJog.shift());
+  const carta = sb.baralhoJog.shift();
   sbSortearCorBaralho();          // a pilha "troca" de carta ao comprar
+  sb.travado = true;              // trava durante a animação de compra
   Som.play("select");
-  sbLog("Você comprou uma carta.");
-  sbGastarAcao();
+  sbAnimarCompra(carta, ()=>{
+    sb.maoJog.push(carta);
+    sb.travado = false;
+    sbLog(`Você comprou ${carta.nome}.`);
+    sbGastarAcao();
+  });
+}
+// carta vem virada como pop-up, vira após 1s revelando qual é, e desce para a mão
+function sbAnimarCompra(carta, done){
+  const ov = $("#sb-compra"), box = $("#sb-compra-carta");
+  if(!ov || !box){ done(); return; }
+  const cb = sb.corBaralho || SB_CORES_BARALHO[0];
+  const c1 = corTipo(carta.tipo1), c2 = corTipo(carta.tipo2 || carta.tipo1);
+  box.className = "sb-compra-carta";
+  box.style.setProperty("--dk1", cb[0]); box.style.setProperty("--dk2", cb[1]);
+  box.innerHTML = `<div class="sb-verso-pk"></div>`;   // pokébola (verso)
+  ov.hidden = false;
+  requestAnimationFrame(()=> box.classList.add("entrou"));
+  setTimeout(()=>{ if(sb.abortado){ ov.hidden = true; return; } box.classList.add("girando"); }, 1000);
+  setTimeout(()=>{
+    if(sb.abortado){ ov.hidden = true; return; }
+    box.classList.remove("girando"); box.classList.add("revelou");
+    box.innerHTML =
+      `<div class="sb-info-carta grande" style="--c1:${c1};--c2:${c2}">
+         <img src="${SPRITE(carta.id)}" onerror="this.onerror=null;this.src='${SPRITE_FALLBACK(carta.id)}'">
+         <div class="sb-info-nome">${carta.nome}</div>
+         <div class="sb-info-tipo">${carta.tipo1}${carta.tipo2?" / "+carta.tipo2:""}</div>
+         <div class="sb-info-stats"><span>⚔️ ${carta.ataque}</span><span>🛡️ ${carta.defesa}</span><span>❤ ${carta.vida}</span></div>
+       </div>`;
+    Som.play("atributo");
+  }, 1180);
+  setTimeout(()=>{ if(sb.abortado){ ov.hidden = true; return; } box.classList.add("descendo"); }, 1950);
+  setTimeout(()=>{ ov.hidden = true; box.className = "sb-compra-carta"; if(!sb.abortado) done(); }, 2400);
 }
 // clique numa carta da mão -> abre opções de colocação
 function sbClicarMao(idx){
@@ -260,9 +303,9 @@ function sbAbrirModalAcao(slot){
        <div class="sb-info-tipo">${slot.modo==="ataque"?"⚔️ Ataque":"🛡️ Defesa"}</div>
        <div class="sb-info-stats"><span>⚔️ ${slot.ataque}</span><span>🛡️ ${slot.defesa}</span><span>❤ ${slot.vida}</span></div>
      </div>`;
-  const podeAtacar = slot.modo==="ataque" && !slot.jaAtacou;
+  const podeAtacar = slot.modo==="ataque" && !slot.jaAtacou && sbPodeAtacar("jogador");
   const outras = sb.campoJog.filter(s=>s!==slot).length > 0;
-  const bAtk = $("#acao-atacar"); if(bAtk){ bAtk.disabled = !podeAtacar; bAtk.hidden = slot.modo!=="ataque"; }
+  const bAtk = $("#acao-atacar"); if(bAtk){ bAtk.disabled = !podeAtacar; bAtk.hidden = slot.modo!=="ataque"; bAtk.textContent = sbPodeAtacar("jogador") ? "⚔️ Atacar" : "⚔️ Atacar (só na 2ª rodada)"; }
   const bSac = $("#acao-sacrificar"); if(bSac) bSac.disabled = !outras;
   $("#modal-sb-acao").hidden = false;
 }
@@ -272,6 +315,7 @@ function sbAcaoEscolhida(acao){
   const slot = sb.selecao.slot;
   if(acao === "atacar"){
     if(slot.modo!=="ataque" || slot.jaAtacou) return;
+    if(!sbPodeAtacar("jogador")){ sbMsg("Não é possível atacar na 1ª rodada — só a partir da 2ª."); return; }
     $("#modal-sb-acao").hidden = true;
     sb.selecao = {tipo:"atacar", atacante:slot};
     sbMsg("Escolha o alvo: uma carta do oponente ou ataque direto.");
@@ -480,6 +524,27 @@ function sbPosAtaque(){
 }
 
 /* ---------- IA do oponente ---------- */
+// melhor carta da CPU para receber reforço: a mais forte de ataque; senão a melhor de defesa
+function sbCpuAlvoReforco(excluir){
+  const atk = sb.campoCpu.filter(s=>s!==excluir && s.modo==="ataque").sort((a,b)=>sbEfAtk(b)-sbEfAtk(a));
+  if(atk.length) return atk[0];
+  const def = sb.campoCpu.filter(s=>s!==excluir && s.modo==="defesa").sort((a,b)=>b.defesa-a.defesa);
+  return def[0] || null;
+}
+// CPU sacrifica `sacr` para reforçar `alvo` em +20%, gasta 1 ação e segue o turno
+function sbCpuSacrificar(sacr, alvo){
+  const ehAtk = alvo.modo === "ataque";
+  const base = ehAtk ? sacr.ataque : sacr.defesaMax;
+  const boost = Math.max(1, Math.round(base * 0.2));
+  const i = sb.campoCpu.indexOf(sacr); if(i>=0) sb.campoCpu.splice(i,1);
+  if(ehAtk){ alvo.ataque += boost; } else { alvo.defesa += boost; alvo.defesaMax += boost; }
+  alvo.focoAtk = ehAtk; alvo.focoDef = !ehAtk;
+  sbLog(`🔥 Oponente sacrificou ${sacr.carta.nome}: +${boost} de ${ehAtk?"ataque":"defesa"} em ${alvo.carta.nome}.`);
+  Som.play("vencerRodada");
+  sb.acoes--;
+  sbDesenhar();
+  setTimeout(()=>{ alvo.focoAtk=false; alvo.focoDef=false; if(!sb.fim && !sb.abortado) (sb.acoes>0 ? sbPassoCPU() : sbEncerrarTurno()); }, 1000);
+}
 function sbPassoCPU(){
   if(sb.fim || sb.abortado) return;
   if(sb.acoes <= 0){ setTimeout(sbEncerrarTurno, 500); return; }
@@ -487,22 +552,39 @@ function sbPassoCPU(){
   const atacantes = campo.filter(s=>s.modo==="ataque" && !s.jaAtacou);
   const defensores = campo.filter(s=>s.modo==="defesa");
 
-  // 1) atacar se tiver atacante (escolhe o atacante com variedade)
+  // 0) carta que ficou com 0 de defesa (foi atacada) é sacrificada p/ reforçar a mais forte de ataque (ou defesa)
+  if(campo.length >= 2){
+    const zerada = campo.find(s=> s.defesaMax>0 && s.defesa===0 && sbCpuAlvoReforco(s));
+    if(zerada){ return sbCpuSacrificar(zerada, sbCpuAlvoReforco(zerada)); }
+  }
+
+  // 1) atacar (só a partir do 2º turno da CPU) — 75% mira DEFESA, 25% mira ATAQUE
   // OBS: a animação de combate chama sbPosAtaque no fim, que decrementa a ação e agenda o próximo passo.
-  if(atacantes.length){
+  if(atacantes.length && sbPodeAtacar("cpu")){
     const atkOrd = atacantes.slice().sort((a,b)=>sbEfAtk(b)-sbEfAtk(a));
     const atk = escolhaComErro(atkOrd);
     const defsJog = sb.campoJog.filter(s=>s.modo==="defesa");
-    if(defsJog.length){
-      const alvoOrd = defsJog.slice().sort((a,b)=>a.vida-b.vida);
-      sbExecAtaqueCarta(atk, escolhaComErro(alvoOrd), sb.campoJog, "jogador");
-    } else if(sb.campoJog.length && Math.random()<0.3){
-      const alvo = sb.campoJog[Math.floor(Math.random()*sb.campoJog.length)];
-      sbExecAtaqueCarta(atk, alvo, sb.campoJog, "jogador");
-    } else {
-      sbExecAtaqueDireto(atk, "jogador");
-    }
+    const atksJog = sb.campoJog.filter(s=>s.modo==="ataque");
+    const porVida = arr => arr.slice().sort((a,b)=>a.vida-b.vida);
+    const querDefesa = Math.random() < 0.75;
+    let alvo = null;
+    if(querDefesa && defsJog.length) alvo = escolhaComErro(porVida(defsJog));
+    else if(!querDefesa && atksJog.length) alvo = escolhaComErro(porVida(atksJog));
+    if(!alvo && defsJog.length) alvo = escolhaComErro(porVida(defsJog));
+    if(!alvo && atksJog.length) alvo = escolhaComErro(porVida(atksJog));
+    if(alvo) sbExecAtaqueCarta(atk, alvo, sb.campoJog, "jogador");
+    else sbExecAtaqueDireto(atk, "jogador");
     return;   // a continuação vem por sbPosAtaque após a animação
+  }
+
+  // 1b) às vezes sacrifica a carta mais fraca para reforçar a mais forte de ataque
+  if(campo.length >= 2 && Math.random() < 0.18){
+    const alvosAtk = campo.filter(s=>s.modo==="ataque").sort((a,b)=>sbEfAtk(b)-sbEfAtk(a));
+    if(alvosAtk.length){
+      const alvo = alvosAtk[0];
+      const cand = campo.filter(s=>s!==alvo).sort((a,b)=>(a.ataque+a.defesa)-(b.ataque+b.defesa));
+      if(cand.length){ return sbCpuSacrificar(cand[0], alvo); }
+    }
   }
   // 2) colocar carta respeitando os limites (até 3 ataque, 2 defesa)
   const podeAtk = sbContar(campo,"ataque") < SB_MAX_ATK;
@@ -628,7 +710,7 @@ function sbRenderCampo(containerId, cards, meu, atacando){
 }
 function sbSlotEl(slot, meu, atacando, tipoSlot){
   const div = document.createElement("div");
-  const podeAtacar = meu && slot && slot.modo==="ataque" && !slot.jaAtacou && sb.turnoDe==="jogador" && sb.acoes>0 && !sb.travado;
+  const podeAtacar = meu && slot && slot.modo==="ataque" && !slot.jaAtacou && sb.turnoDe==="jogador" && sb.acoes>0 && !sb.travado && sbPodeAtacar("jogador");
   const sacrificando = sb.selecao && sb.selecao.tipo==="sacrificar";
   div.className = "sb-slot slot-" + tipoSlot + (slot ? "" : " vazio") +
     (!meu && atacando && slot ? " alvo" : "") +
@@ -760,6 +842,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const bl = $("#btn-comprar-lp"); if(bl) bl.addEventListener("click", comprarLPSuper);
   const bcancel = $("#sb-colocar-cancelar"); if(bcancel) bcancel.addEventListener("click", sbFecharModalColocar);
   const bok = $("#sb-fim-pop-ok"); if(bok) bok.addEventListener("click", ()=>{ const p=$("#sb-fim-pop"); if(p) p.hidden=true; sbFim(sb.lpCpu <= 0); });
+  const bRod = $("#sb-rodada-ok"); if(bRod) bRod.addEventListener("click", ()=>{ const m=$("#modal-sb-rodada"); if(m) m.hidden=true; sbEncerrarTurno(); });
   // menu da carta no campo (atacar / descartar / sacrificar)
   const bAcCancel = $("#sb-acao-cancelar"); if(bAcCancel) bAcCancel.addEventListener("click", sbFecharModalAcao);
   const mAcao = $("#modal-sb-acao"); if(mAcao) mAcao.addEventListener("click", e=>{ if(e.target.id==="modal-sb-acao") sbFecharModalAcao(); });
