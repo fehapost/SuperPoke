@@ -34,6 +34,55 @@ function sbEfetividade(atk, def){
   return 1;
 }
 
+/* ---------- Dicas de como jogar (elementos + ataque/defesa) ---------- */
+function sbDicasHTML(modo){
+  const icon = (t)=> (typeof sbElemIcon==="function" ? sbElemIcon(t) : "⭐");
+  const nomeTipo = (t)=> t.charAt(0)+t.slice(1).toLowerCase();
+  const linhasElem = Object.keys(SB_FORTE).map(t=>{
+    const fortes = (SB_FORTE[t]||[]).map(x=>icon(x)).join("");
+    return `<div class="dica-elem-linha">
+        <span class="dica-elem-nome">${icon(t)} ${nomeTipo(t)}</span>
+        <span class="dica-elem-vs">forte contra ${fortes || "—"}</span>
+      </div>`;
+  }).join("");
+  const geral = `
+    <div class="dica-bloco">
+      <b>⚔️ Ataque × 🛡️ Defesa × ❤️ Vida</b>
+      <p>Cada carta tem <b>ataque</b> (dano que causa), <b>defesa</b> (escudo) e <b>vida</b>. Ao atacar,
+      o dano bate primeiro na <b>defesa</b> do alvo (que vai sendo consumida); o que passar da defesa
+      tira da <b>vida</b>; e o que passar da vida, se a carta estava em <b>defesa</b>, vai para os <b>LP</b>.
+      Cartas em <b>ataque</b> derrotadas <i>não</i> tiram LP.</p>
+    </div>
+    <div class="dica-bloco">
+      <b>🔥 Fator elemento</b>
+      <p>O tipo do atacante multiplica o dano: <b class="dica-forte">×1,5</b> se for <b>forte</b> contra o alvo,
+      <b class="dica-fraco">×0,5</b> se for <b>fraco</b>, e <b>×1</b> caso neutro.</p>
+    </div>`;
+  const champ = modo==="super" ? `
+    <div class="dica-bloco">
+      <b>🃏 Regras do Campeonato</b>
+      <p>Cada rodada dá um número de <b>ações</b> (2 a 5, em ciclo). Use-as para <b>comprar</b>, <b>posicionar</b>
+      (ataque em pé ou defesa deitada, viradas p/ cima/baixo) ou <b>atacar</b>. <b>Ataque só a partir da 2ª rodada.</b>
+      Cartas p/ cima dão bônus (+10% ataque / +20% defesa). Você pode <b>sacrificar</b> uma carta para reforçar outra em +20%.
+      Sem ações, toque no <b>▶</b> (piscando) para encerrar a rodada.</p>
+    </div>` : `
+    <div class="dica-bloco">
+      <b>🎴 Regras da partida</b>
+      <p>A cada rodada escolha um <b>atributo</b> da sua carta. ${modo==="vida"
+        ? "No <b>Tournament</b> o perdedor da rodada perde <b>vida</b> igual à diferença; vence quem zerar a vida do outro."
+        : "No <b>Classic</b> a carta derrotada é <b>eliminada</b>; vence quem acabar com as cartas do oponente."}</p>
+    </div>`;
+  return geral + champ +
+    `<div class="dica-bloco"><b>🌈 Tabela de elementos (forte contra)</b>
+       <div class="dica-elem-tabela">${linhasElem}</div></div>`;
+}
+function abrirDicas(modo){
+  const c = document.getElementById("dicas-conteudo");
+  if(c) c.innerHTML = sbDicasHTML(modo);
+  const m = document.getElementById("modal-dicas"); if(m) m.hidden = false;
+}
+function fecharDicas(){ const m = document.getElementById("modal-dicas"); if(m) m.hidden = true; }
+
 /* ---------- Campanha Super Battle — 25 níveis, cada um com sua cor temática ---------- */
 // cor = [claro, escuro] usada no verso das cartas do oponente e no ícone do nível
 const NIVEIS_SUPER = [
@@ -164,12 +213,12 @@ function sbRenderNiveis(cont, grupoIdx){
       `<small>${info.raridades.join(" · ")}</small>`+
       `<small class="nivel-ouro">❤ ${info.lp} LP · 💰 ${ouroNivelSuper(info.n)}</small></span>`+
       `<span class="nivel-tag">${tag}</span>`;
-    if(est !== "bloqueado") el.onclick = ()=>iniciarSuperNivel(info.n);
+    if(est !== "bloqueado") el.onclick = ()=>escolherTimeParaNivel(info.n, "super");
     cont.appendChild(el);
   });
 }
 
-function iniciarSuperNivel(nivel){
+function iniciarSuperNivel(nivel, deckSel){
   const info = NIVEIS_SUPER[nivel-1];
   sb.nivel = nivel;
   sb.fim = false; sb.travado = false; sb.selecao = null; sb.abortado = false;
@@ -183,8 +232,10 @@ function iniciarSuperNivel(nivel){
   sb.lpJogMax = sb.lpJog; sb.lpCpuMax = sb.lpCpu;
   sb.avatarOp = (typeof avatarDoNivel === "function") ? avatarDoNivel(nivel+9) : "🃏";
   sb.nomeOp = info.nome;
-  // baralho do jogador = toda a coleção (com repetidas)
-  let dj = embaralhar((progresso.owned||[]).map(cartaPorId).filter(Boolean));
+  // baralho do jogador = as cartas escolhidas (ou toda a coleção se não veio seleção)
+  let dj = (deckSel && deckSel.length)
+    ? embaralhar(deckSel.slice())
+    : embaralhar((progresso.owned||[]).map(cartaPorId).filter(Boolean));
   if(dj.length === 0) dj = CARTAS_INICIAIS.map(cartaPorId);
   sb.baralhoJog = dj;
   sb.maoJog = sb.baralhoJog.splice(0, Math.min(4, sb.baralhoJog.length));
@@ -718,7 +769,7 @@ function sbFim(venceu){
     t.classList.add("perdeu");
     s.innerHTML = `<b>${info.nome}</b> zerou seus pontos de vida.<br><span class="ganho">+10 de ouro</span> de consolação. Compre <b>LP</b> na loja!`;
   }
-  botaoFim(acoes, "↺ Duelar de novo", "btn-grande", ()=>iniciarSuperNivel(sb.nivel));
+  botaoFim(acoes, "↺ Duelar de novo", "btn-grande", ()=>escolherTimeParaNivel(sb.nivel, "super"));
   botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
   botaoFim(acoes, "🃏 Campeonato", "btn-sec", ()=>abrirCampanhaSuper());
   // sem auto-avanço: o jogador escolhe um botão (evita timer/sons remanescentes)

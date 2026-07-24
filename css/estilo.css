@@ -20,6 +20,32 @@ body{
 }
 #app{width:100%;max-width:960px;position:relative}
 
+/* ===== Transição de tela: pokébola fecha/abre + luz ===== */
+#transicao{position:fixed;inset:0;z-index:120;pointer-events:none;overflow:hidden;display:none}
+#transicao.rodando{display:block}
+.trans-top,.trans-bot{position:absolute;left:0;width:100%;height:50%;transform:scaleY(0)}
+.trans-top{top:0;transform-origin:top;background:linear-gradient(#e3350d,#a5281c)}
+.trans-bot{bottom:0;transform-origin:bottom;background:linear-gradient(#f5f5f5,#d7dbe2)}
+#transicao.rodando .trans-top{animation:transTop .72s ease-in-out}
+#transicao.rodando .trans-bot{animation:transBot .72s ease-in-out}
+.trans-ball{position:absolute;top:50%;left:50%;width:120px;height:120px;border-radius:50%;
+  transform:translate(-50%,-50%) scale(0);opacity:0;
+  background:linear-gradient(#e3350d 0 46%,#1b1f2a 46% 54%,#f5f5f5 54% 100%);
+  border:6px solid #1b1f2a;box-shadow:0 0 30px rgba(0,0,0,.5)}
+.trans-ball-btn{position:absolute;top:50%;left:50%;width:34px;height:34px;transform:translate(-50%,-50%);
+  border-radius:50%;background:#fff;border:6px solid #1b1f2a}
+#transicao.rodando .trans-ball{animation:transBall .72s ease-in-out}
+.trans-luz{position:absolute;top:0;left:-40%;width:40%;height:100%;opacity:0;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.85),transparent);filter:blur(4px)}
+#transicao.rodando .trans-luz{animation:transLuz .72s ease-out}
+@keyframes transTop{0%{transform:scaleY(0)}40%{transform:scaleY(1)}60%{transform:scaleY(1)}100%{transform:scaleY(0)}}
+@keyframes transBot{0%{transform:scaleY(0)}40%{transform:scaleY(1)}60%{transform:scaleY(1)}100%{transform:scaleY(0)}}
+@keyframes transBall{0%{transform:translate(-50%,-50%) scale(0) rotate(0);opacity:0}
+  35%{transform:translate(-50%,-50%) scale(1) rotate(180deg);opacity:1}
+  60%{transform:translate(-50%,-50%) scale(1) rotate(360deg);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(0) rotate(540deg);opacity:0}}
+@keyframes transLuz{0%{left:-40%;opacity:0}30%{opacity:1}100%{left:120%;opacity:0}}
+
 /* --- Telas --- */
 .tela{display:none;animation:fade .3s ease}
 .tela.ativa{display:flex;flex-direction:column;align-items:center;gap:18px}
@@ -39,7 +65,8 @@ body{
 .btn-prox{background:var(--verde);font-size:1.15rem;padding:14px 34px;margin-top:6px}
 
 /* ===== MENU ===== */
-#tela-menu{padding-top:6vh;text-align:center}
+#tela-menu{padding-top:2vh;text-align:center}
+.tela.ativa#tela-menu{gap:12px}
 .logo{display:flex;flex-direction:column;line-height:1;filter:drop-shadow(0 4px 0 rgba(0,0,0,.3))}
 .logo-super{font-size:2rem;font-weight:900;letter-spacing:6px;color:var(--amarelo);
   -webkit-text-stroke:1.5px var(--azul-esc)}
@@ -164,6 +191,23 @@ body{
 .pac-info-bar > span{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--azul),var(--amarelo))}
 .pac-info-pct{flex:0 0 42px;text-align:right;font-weight:800;font-size:.82rem;color:var(--amarelo)}
 .pac-info-sub{font-size:.8rem;color:#cfe0ff;opacity:.85;margin-bottom:12px}
+
+/* ===== Dicas de como jogar ===== */
+.btn-dicas{background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.25);margin-top:4px}
+.modal-dicas-box{max-width:520px;text-align:left;max-height:86vh;overflow-y:auto}
+.modal-dicas-box h2{text-align:center}
+#dicas-conteudo{display:flex;flex-direction:column;gap:10px;margin:8px 0 14px}
+.dica-bloco{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px}
+.dica-bloco b{color:var(--amarelo)}
+.dica-bloco p{margin-top:4px;font-size:.86rem;line-height:1.5;color:#dfe8ff}
+.dica-forte{color:#8ff0a8}
+.dica-fraco{color:#ff9d8a}
+.dica-elem-tabela{margin-top:6px;display:grid;grid-template-columns:1fr;gap:4px;max-height:220px;overflow-y:auto}
+.dica-elem-linha{display:flex;justify-content:space-between;gap:8px;font-size:.8rem;
+  background:rgba(255,255,255,.05);border-radius:8px;padding:4px 8px}
+.dica-elem-nome{font-weight:800;color:#fff;white-space:nowrap}
+.dica-elem-vs{color:#cfe0ff;text-align:right}
+.modal-dicas-box .btn-sec{width:100%}
 .pacote-item:hover{transform:translateY(-4px);filter:brightness(1.12)}
 .pacote-item.caro{opacity:.55}
 .pacote-emoji{font-size:2.4rem;line-height:1}
@@ -420,6 +464,10 @@ body{
 #sb-fim-pop-titulo.venceu{color:var(--verde)}
 #sb-fim-pop-titulo.perdeu{color:var(--vermelho)}
 #sb-fim-pop-sub{opacity:.85;margin-bottom:14px}
+/* dois botões lado a lado, mesmo tamanho (modal de sair) */
+.modal-acoes-linha{display:flex;gap:10px;width:100%;margin-top:6px}
+.modal-acoes-linha .btn{flex:1 1 0;min-width:0;font-size:1rem;padding:12px 10px}
+.btn-perigo{background:var(--vermelho)}
 
 /* ===== POP-UP DE COMBATE (animação de ataque) ===== */
 #sb-combate{position:fixed;inset:0;z-index:60;background:rgba(6,9,18,.82);
@@ -769,6 +817,7 @@ body{
 .avatar-jogador{border-color:var(--amarelo)}
 .botoes-mini{display:flex;flex-direction:column;gap:4px}
 .perfil-menu{display:flex;flex-direction:column;align-items:center;gap:6px}
+.perfil-acoes{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
 .avatar-grande{width:76px;height:76px;font-size:2.6rem;border-color:var(--amarelo);
   cursor:pointer;transition:transform .1s}
 .avatar-grande:hover{transform:scale(1.08);box-shadow:0 0 14px rgba(255,203,5,.5)}

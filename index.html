@@ -36,6 +36,14 @@
 <body>
 <div id="app">
 
+  <!-- ===== TRANSIÇÃO DE TELA (pokébola fecha/abre + luz) ===== -->
+  <div id="transicao" aria-hidden="true">
+    <div class="trans-top"></div>
+    <div class="trans-bot"></div>
+    <div class="trans-ball"><span class="trans-ball-btn"></span></div>
+    <div class="trans-luz"></div>
+  </div>
+
   <!-- ===== INTRO ===== -->
   <section id="tela-intro" class="tela ativa">
     <div class="intro-palco">
@@ -105,13 +113,15 @@
     <div class="logo">
       <span class="logo-super">SUPER</span>
       <span class="logo-pokemon">POKÉMON</span>
-      <span class="logo-sub">FORÇA · ATAQUE · DEFESA · AGILIDADE · VIDA · INTELIGÊNCIA</span>
     </div>
 
     <div class="perfil-menu">
       <div class="avatar avatar-grande" id="menu-avatar">🧑</div>
       <div class="perfil-nome" id="menu-nome">Treinador</div>
-      <button class="btn btn-mini" id="btn-config">⚙️ Configurações</button>
+      <div class="perfil-acoes">
+        <button class="btn btn-mini" id="btn-config">⚙️ Configurações</button>
+        <button class="btn btn-mini js-som" title="Som">🔊</button>
+      </div>
     </div>
 
     <div class="menu-chips">
@@ -119,11 +129,6 @@
       <span class="chip">💰 <b id="chip-pontos">0</b> pts</span>
       <span class="chip">🃏 <b id="chip-cartas">3</b> cartas</span>
     </div>
-
-    <p class="menu-desc">
-      Comece com 3 cartas fracas e suba a escada de oponentes cada vez mais fortes.
-      Vença batalhas, ganhe pontos e compre cartas melhores na <b>Loja</b>!
-    </p>
 
     <div class="menu-grade">
       <button class="menu-quad q-classic" id="btn-campanha">
@@ -142,9 +147,6 @@
         <span class="mq-ico">❔</span><span class="mq-txt">Como jogar</span></button>
       <button class="menu-quad q-reset" id="btn-reset">
         <span class="mq-ico">↺</span><span class="mq-txt">Reiniciar progresso</span></button>
-    </div>
-    <div class="menu-botoes">
-      <button class="btn btn-reset js-som">🔊</button>
     </div>
   </section>
 
@@ -298,6 +300,7 @@
         </div>
         <div class="avatar avatar-oponente" id="avatar-oponente">🤖</div>
         <button class="btn btn-mini sair" id="btn-sair">✕ Sair</button>
+        <button class="btn btn-mini btn-dicas" data-modo="classic">💡 Dicas</button>
       </div>
     </header>
 
@@ -336,8 +339,8 @@
   <section id="tela-selecao" class="tela">
     <header class="sub-header fixo">
       <div class="sub-header-linha">
-        <h2>🎴 Monte seu time</h2>
-        <span class="chip">Selecionadas: <b id="sel-contagem">0</b> (3 a 5)</span>
+        <h2 id="sel-titulo">🎴 Monte seu time</h2>
+        <span class="chip">Selecionadas: <b id="sel-contagem">0</b> <span id="sel-faixa">(3 a 5)</span></span>
         <button class="btn btn-grande" id="btn-sel-confirmar" disabled>Batalhar ▶</button>
         <button class="btn btn-sec" id="btn-sel-voltar">Voltar</button>
       </div>
@@ -350,7 +353,7 @@
       </div>
     </header>
     <p class="sub-desc" id="sel-recompensa"></p>
-    <p class="sub-desc">Escolha de <b>3 a 5 cartas</b> do seu baralho para levar ao desafio. Clique nas cartas para selecionar.</p>
+    <p class="sub-desc" id="sel-instrucao">Escolha de <b>3 a 5 cartas</b> do seu baralho para levar ao desafio. Clique nas cartas para selecionar.</p>
     <div id="sel-grid"></div>
   </section>
 
@@ -412,6 +415,7 @@
         </div>
         <div class="avatar avatar-jogador" id="sb-avatar-jog">🧑</div>
         <button class="btn btn-mini sair" id="btn-sb-sair">✕ Sair</button>
+        <button class="btn btn-mini btn-dicas" data-modo="super">💡 Dicas</button>
       </div>
     </header>
 
@@ -469,8 +473,19 @@
       <div id="sair-emoji">🚪</div>
       <h2>Sair da batalha?</h2>
       <p>Tem certeza que deseja sair da batalha? O progresso deste duelo será perdido.</p>
-      <button class="btn btn-grande" id="btn-sair-sim">Sim, sair</button>
-      <button class="btn btn-sec" id="btn-sair-nao">Continuar jogando</button>
+      <div class="modal-acoes-linha">
+        <button class="btn btn-sec" id="btn-sair-nao">Continuar</button>
+        <button class="btn btn-perigo" id="btn-sair-sim">Sim, sair</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DICAS DE COMO JOGAR ===== -->
+  <div id="modal-dicas" class="modal" hidden>
+    <div class="modal-box modal-dicas-box">
+      <h2>💡 Dicas de como jogar</h2>
+      <div id="dicas-conteudo"></div>
+      <button class="btn btn-sec" id="btn-dicas-fechar">Fechar</button>
     </div>
   </div>
 

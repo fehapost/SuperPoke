@@ -309,9 +309,19 @@ function totalDistintas(){ return new Set(progresso.owned).size; }
 
 /* ---------- Utilidades ---------- */
 const $ = sel => document.querySelector(sel);
+let _transTimer = null;
 function mostrarTela(id){
   document.querySelectorAll(".tela").forEach(t=>t.classList.remove("ativa"));
-  $("#"+id).classList.add("ativa");
+  const alvo = $("#"+id); if(alvo) alvo.classList.add("ativa");
+  tocarTransicao();   // efeito rápido de pokébola + luz (cosmético, não bloqueia)
+}
+// pokébola fecha/abre + fade com luz — rápido e sobre a tela nova
+function tocarTransicao(){
+  const t = $("#transicao"); if(!t) return;
+  t.classList.remove("rodando"); void t.offsetWidth;   // reinicia a animação
+  t.classList.add("rodando");
+  clearTimeout(_transTimer);
+  _transTimer = setTimeout(()=>t.classList.remove("rodando"), 720);
 }
 function embaralhar(arr){
   const a = arr.slice();
@@ -485,16 +495,32 @@ function batalhaLivre(modo){
 
 /* ---------- Seleção de time (antes da campanha) ---------- */
 let _pendingNivel = 1;
-let _pendingModo = "normal";   // "normal" (cartas) ou "vida"
+let _pendingModo = "normal";   // "normal" (cartas), "vida" ou "super" (campeonato)
 const _selecionadas = new Set();
+const SB_MIN_BARALHO = 15;
+// mínimo/máximo de cartas conforme o modo
+function selMin(){
+  if(_pendingModo === "super") return Math.min(SB_MIN_BARALHO, cartasPossuidas().length);
+  return MIN_CARTAS;
+}
+function selMax(){
+  if(_pendingModo === "super") return cartasPossuidas().length;   // pode levar todas
+  return 5;
+}
 function escolherTimeParaNivel(nivel, modo){
   _pendingNivel = nivel;
   _pendingModo = modo || "normal";
   _selecionadas.clear();
-  // pré-seleciona o time favorito (só cartas que possui, até 5)
-  (progresso.timeFavorito || []).forEach(id=>{
-    if(progresso.owned.includes(id) && _selecionadas.size < 5) _selecionadas.add(id);
-  });
+  if(_pendingModo === "super"){
+    // se tem 15 ou menos, joga com todas (pré-selecionadas)
+    const pool = cartasPossuidas();
+    if(pool.length <= SB_MIN_BARALHO) pool.forEach(p=>_selecionadas.add(p.id));
+  } else {
+    // pré-seleciona o time favorito (só cartas que possui, até 5)
+    (progresso.timeFavorito || []).forEach(id=>{
+      if(progresso.owned.includes(id) && _selecionadas.size < 5) _selecionadas.add(id);
+    });
+  }
   mostrarTela("tela-selecao");
   renderSelecao();
 }
@@ -515,13 +541,31 @@ function renderSelecao(){
 }
 function atualizarStatsSelecao(){
   const v = progresso.vitorias||0, d = progresso.derrotas||0, part = v+d;
+  const min = selMin(), max = selMax();
   $("#sel-contagem").textContent = _selecionadas.size;
-  $("#btn-sel-confirmar").disabled = _selecionadas.size < MIN_CARTAS;
+  $("#btn-sel-confirmar").disabled = _selecionadas.size < min;
   $("#sel-pontos").textContent = progresso.pontos;
   $("#sel-vit").textContent = v;
   $("#sel-der").textContent = d;
   $("#sel-perc").textContent = part ? Math.round(v/part*100) : 0;
   $("#sel-part").textContent = part;
+  const faixa = $("#sel-faixa"), inst = $("#sel-instrucao"), tit = $("#sel-titulo");
+  if(_pendingModo === "super"){
+    if(faixa) faixa.textContent = `(mín. ${min})`;
+    if(tit) tit.textContent = "🃏 Monte seu baralho";
+    if(inst) inst.innerHTML = cartasPossuidas().length <= SB_MIN_BARALHO
+      ? `Você tem <b>${cartasPossuidas().length}</b> cartas — todas entram no baralho deste campeonato.`
+      : `Escolha <b>no mínimo ${min} cartas</b> da sua coleção para o baralho (pode levar mais).`;
+    const g = campeonatoDoNivel("super", _pendingNivel);
+    const info = NIVEIS_SUPER[_pendingNivel-1];
+    const ouro = ouroNivelSuper(_pendingNivel);
+    $("#sel-recompensa").innerHTML =
+      `${g?`🏆 <b>${g.nome}</b> · `:""}Nível ${_pendingNivel} · <b>${info?info.nome:""}</b> — vencendo você ganha <b class="ouro-txt">💰 ${ouro} de ouro</b>`;
+    return;
+  }
+  if(faixa) faixa.textContent = "(3 a 5)";
+  if(tit) tit.textContent = "🎴 Monte seu time";
+  if(inst) inst.innerHTML = "Escolha de <b>3 a 5 cartas</b> do seu baralho para levar ao desafio. Clique nas cartas para selecionar.";
   let info, ouro, bonus, extra = "";
   if(_pendingModo === "vida"){
     info = NIVEIS_VIDA[_pendingNivel-1];
@@ -541,7 +585,7 @@ function toggleSelecao(id, el){
   if(_selecionadas.has(id)){
     _selecionadas.delete(id);
   } else {
-    if(_selecionadas.size >= 5){ Som.play("erro"); return; }
+    if(_selecionadas.size >= selMax()){ Som.play("erro"); return; }
     _selecionadas.add(id);
   }
   Som.play("select");
@@ -559,8 +603,9 @@ function toggleSelecao(id, el){
 }
 function confirmarSelecao(){
   const deck = [..._selecionadas].map(cartaPorId).filter(Boolean);
-  if(deck.length < MIN_CARTAS){ Som.play("erro"); return; }
-  if(_pendingModo === "vida") iniciarNivelVida(_pendingNivel, deck);
+  if(deck.length < selMin()){ Som.play("erro"); return; }
+  if(_pendingModo === "super") iniciarSuperNivel(_pendingNivel, deck);
+  else if(_pendingModo === "vida") iniciarNivelVida(_pendingNivel, deck);
   else iniciarNivel(_pendingNivel, deck);
 }
 
@@ -1742,6 +1787,13 @@ document.addEventListener("DOMContentLoaded", ()=>{
   // info do pacote (chances)
   $("#pac-info-fechar").addEventListener("click", fecharInfoPacote);
   $("#modal-pacote-info").addEventListener("click", e=>{ if(e.target.id === "modal-pacote-info") fecharInfoPacote(); });
+  // dicas de como jogar (em todos os modos)
+  document.querySelectorAll(".btn-dicas").forEach(b=>b.addEventListener("click", ()=>{
+    const modo = b.dataset.modo==="super" ? "super" : (estado.modoVida ? "vida" : "classic");
+    abrirDicas(modo);
+  }));
+  $("#btn-dicas-fechar").addEventListener("click", fecharDicas);
+  $("#modal-dicas").addEventListener("click", e=>{ if(e.target.id === "modal-dicas") fecharDicas(); });
 
   // configurações
   $("#btn-config").addEventListener("click", abrirConfig);
@@ -1771,7 +1823,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   // seleção de time
   $("#btn-sel-confirmar").addEventListener("click", confirmarSelecao);
-  $("#btn-sel-voltar").addEventListener("click", ()=> _pendingModo==="vida" ? abrirCampanhaVida() : abrirCampanha());
+  $("#btn-sel-voltar").addEventListener("click", ()=>
+    _pendingModo==="super" ? abrirCampanhaSuper() : (_pendingModo==="vida" ? abrirCampanhaVida() : abrirCampanha()));
 
   // regras
   $("#btn-regras").addEventListener("click", abrirRegras);
