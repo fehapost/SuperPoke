@@ -117,7 +117,7 @@ function sbContar(campo, modo){ return campo.filter(s=>s.modo===modo).length; }
 function abrirCampanhaSuper(grupoIdx){
   mostrarTela("tela-campanha");
   $("#camp-pontos").textContent = progresso.pontos;
-  $("#camp-titulo").textContent = "🃏 Super Battle Championship";
+  $("#camp-titulo").textContent = "🃏 Campeonato";
   $("#camp-desc").innerHTML = "Duelo com <b>ações</b>, elementos e cartas em ataque/defesa. Seu baralho é <b>toda a sua coleção</b>. Compre <b>LP</b> na loja (Super Batalha).";
   const cont = $("#campanha-lista");
   if(grupoIdx === undefined || grupoIdx === null) sbRenderCaixas(cont);
@@ -126,23 +126,16 @@ function abrirCampanhaSuper(grupoIdx){
 function sbRenderCaixas(cont){
   cont.className = "camp-grid";
   cont.innerHTML = "";
+  const nivelAtual = progresso.nivelSuper || 1;
   campeonatosDoModo("super").forEach(g=>{
-    const liberado = (progresso.nivelSuper||1) >= g.de;
-    const fechado  = campeonatoFechado("super", g.idx) || (progresso.nivelSuper||1) > g.ate;
-    const el = document.createElement("button");
-    el.className = "camp-caixa" + (fechado ? " fechado" : liberado ? " atual" : " bloqueado");
-    el.disabled = !liberado;
-    el.style.setProperty("--dk1", g.cor[0]); el.style.setProperty("--dk2", g.cor[1]);
-    const venc = Math.max(0, Math.min(g.ate, (progresso.nivelSuper||1)-1) - g.de + 1);
-    const total = g.ate - g.de + 1;
-    el.innerHTML =
-      `<span class="camp-cartinha"></span>`+
-      `<span class="camp-nome">${g.nome}</span>`+
-      `<span class="camp-dif">${g.dif}</span>`+
-      `<span class="camp-prog">${fechado ? "🏆 fechado" : liberado ? `${venc}/${total} vencidos` : "🔒 bloqueado"}</span>`+
-      `<span class="camp-bonus">💰 ${g.bonus} ao fechar</span>`;
-    if(liberado) el.onclick = ()=>abrirCampanhaSuper(g.idx);
-    cont.appendChild(el);
+    const liberado = nivelAtual >= g.de;
+    const fechado  = campeonatoFechado("super", g.idx) || nivelAtual > g.ate;
+    const venc = Math.max(0, Math.min(g.ate, nivelAtual-1) - g.de + 1);
+    montarCaixaCampeonato(cont, g, "super", {
+      liberado, fechado, venc, total: g.ate - g.de + 1,
+      onOpen: ()=>abrirCampanhaSuper(g.idx),
+      onRefresh: ()=>abrirCampanhaSuper()
+    });
   });
 }
 function sbRenderNiveis(cont, grupoIdx){
@@ -726,7 +719,7 @@ function sbFim(venceu){
   }
   botaoFim(acoes, "↺ Duelar de novo", "btn-grande", ()=>iniciarSuperNivel(sb.nivel));
   botaoFim(acoes, "🛒 Loja", "btn-sec", abrirLoja);
-  botaoFim(acoes, "🃏 Championship", "btn-sec", abrirCampanhaSuper);
+  botaoFim(acoes, "🃏 Campeonato", "btn-sec", ()=>abrirCampanhaSuper());
   const host = $("#fim-crono");
   host.innerHTML = htmlCrono(SEGUNDOS_TIMER);
   _fimTimer = animarCrono(host, SEGUNDOS_TIMER, ()=>{ limparTimers(); abrirCampanhaSuper(); });
@@ -911,7 +904,7 @@ function comprarLPSuper(){
 
 /* ---------- Ligações ---------- */
 document.addEventListener("DOMContentLoaded", ()=>{
-  const bt = $("#btn-campanha-super"); if(bt) bt.addEventListener("click", abrirCampanhaSuper);
+  const bt = $("#btn-campanha-super"); if(bt) bt.addEventListener("click", ()=>abrirCampanhaSuper());
   const be = $("#btn-sb-encerrar"); if(be) be.addEventListener("click", ()=>{ if(!sb.travado && sb.turnoDe==="jogador") sbEncerrarTurno(); });
   const bs = $("#btn-sb-sair"); if(bs) bs.addEventListener("click", ()=>{
     pedirConfirmacaoSaida(()=>{ sbAbortarDuelo(); abrirCampanhaSuper(); });

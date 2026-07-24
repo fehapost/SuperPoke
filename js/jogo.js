@@ -209,7 +209,60 @@ function premiarCampeonato(modo, nivelVencido){
   return g;
 }
 function campeonatoFechado(modo, idx){
-  return !!(progresso.campeonatos && progresso.campeonatos[modo + "-" + idx]);
+  if(progresso.campeonatos && progresso.campeonatos[modo + "-" + idx]) return true;
+  const g = campeonatosDoModo(modo)[idx];
+  return !!g && nivelAtualDoModo(modo) > g.ate;   // já passou de todos os 5 níveis
+}
+// pacote de recompensa do campeonato (por tier) — resgatável 1x depois de fechar os 5
+function pacoteDoCampeonato(idx){ return PACOTES[Math.min(idx, PACOTES.length-1)]; }
+function campeonatoResgatavel(modo, idx){
+  return campeonatoFechado(modo, idx) && !(progresso.pacotesResgatados && progresso.pacotesResgatados[modo + "-" + idx]);
+}
+function resgatarPacoteCampeonato(modo, idx){
+  if(!campeonatoResgatavel(modo, idx)) return false;
+  progresso.pacotesResgatados = progresso.pacotesResgatados || {};
+  progresso.pacotesResgatados[modo + "-" + idx] = true;
+  const pac = pacoteDoCampeonato(idx);
+  const ganhos = [];
+  for(let i=0;i<2;i++){
+    let rar = sortearRaridade(pac.dist);
+    let pool = POKEMONS.filter(p=>p.raridade===rar);
+    if(!pool.length) pool = POKEMONS.filter(p=>p.raridade==="Comum");
+    if(!pool.length) pool = POKEMONS;
+    const p = pool[Math.floor(Math.random()*pool.length)];
+    const jaTinha = progresso.owned.includes(p.id);
+    progresso.owned.push(p.id);
+    ganhos.push({id:p.id, repetida:jaTinha});
+  }
+  salvarProgresso();
+  Som.play("premio");
+  mostrarAberturaPacote(pac, ganhos);
+  return true;
+}
+// monta uma célula da grade: caixa do campeonato + botão "Resgatar pacote"
+function montarCaixaCampeonato(cont, g, modo, st){
+  const cell = document.createElement("div");
+  cell.className = "camp-cell";
+  const el = document.createElement("button");
+  el.className = "camp-caixa" + (st.fechado ? " fechado" : st.liberado ? " atual" : " bloqueado");
+  el.disabled = !st.liberado;
+  el.style.setProperty("--dk1", g.cor[0]); el.style.setProperty("--dk2", g.cor[1]);
+  el.innerHTML =
+    `<span class="camp-cartinha"></span>`+
+    `<span class="camp-nome">${g.nome}</span>`+
+    `<span class="camp-dif">${g.dif}</span>`+
+    `<span class="camp-prog">${st.fechado ? "🏆 fechado" : st.liberado ? `${st.venc}/${st.total} vencidos` : "🔒 bloqueado"}</span>`+
+    `<span class="camp-bonus">💰 ${g.bonus} ao fechar</span>`;
+  if(st.liberado && st.onOpen) el.onclick = st.onOpen;
+  cell.appendChild(el);
+  const resgatavel = campeonatoResgatavel(modo, g.idx);
+  const resg = document.createElement("button");
+  resg.className = "camp-resgatar" + (resgatavel ? "" : " off");
+  resg.disabled = !resgatavel;
+  resg.textContent = campeonatoFechado(modo, g.idx) && !resgatavel ? "✅ Pacote resgatado" : "🎁 Resgatar pacote";
+  if(resgatavel) resg.onclick = ()=>{ if(resgatarPacoteCampeonato(modo, g.idx) && st.onRefresh) st.onRefresh(); };
+  cell.appendChild(resg);
+  cont.appendChild(cell);
 }
 
 let progresso = carregarProgresso();
@@ -219,7 +272,7 @@ function progressoPadrao(){
   return { owned: [], pontos: 0, nivel: 1, vitorias: 0, derrotas: 0,
            timeFavorito: [], nome: "Treinador", foto: "🧑",
            nivelVida: 1, vidaMax: VIDA_INICIAL, campanhaZerada: false,
-           nivelSuper: 1, lpSuper: 100, campeonatos: {} };
+           nivelSuper: 1, lpSuper: 100, campeonatos: {}, pacotesResgatados: {} };
 }
 function carregarProgresso(){
   try{
@@ -238,6 +291,7 @@ function carregarProgresso(){
         if(typeof o.nivelSuper !== "number") o.nivelSuper = 1;
         if(typeof o.lpSuper !== "number") o.lpSuper = 100;
         if(!o.campeonatos || typeof o.campeonatos !== "object") o.campeonatos = {};
+        if(!o.pacotesResgatados || typeof o.pacotesResgatados !== "object") o.pacotesResgatados = {};
         return o;
       }
     }
@@ -410,9 +464,8 @@ function iniciarNivelVida(nivel, meuDeck){
 }
 
 /* ---------- Batalha livre (2 modos) ---------- */
-function escolherBatalhaLivre(){ $("#modal-livre").hidden = false; }
+function escolherBatalhaLivre(){ mostrarTela("tela-livre"); }
 function batalhaLivre(modo){
-  $("#modal-livre").hidden = true;
   let meu, cpu;
   if(modo === "meu"){
     // com SEUS Pokémon (usa time favorito se houver, senão sorteia) — ganha ouro
@@ -1066,21 +1119,12 @@ function renderCaixasCampeonato(modo, cont){
   campeonatosDoModo(modo).forEach(g=>{
     const liberado = nivelAtual >= g.de;
     const fechado  = campeonatoFechado(modo, g.idx) || nivelAtual > g.ate;
-    const el = document.createElement("button");
-    el.className = "camp-caixa" + (fechado ? " fechado" : liberado ? " atual" : " bloqueado");
-    el.disabled = !liberado;
-    el.style.setProperty("--dk1", g.cor[0]);
-    el.style.setProperty("--dk2", g.cor[1]);
     const venc = Math.max(0, Math.min(g.ate, nivelAtual-1) - g.de + 1);
-    const total = g.ate - g.de + 1;
-    el.innerHTML =
-      `<span class="camp-cartinha"></span>`+
-      `<span class="camp-nome">${g.nome}</span>`+
-      `<span class="camp-dif">${g.dif}</span>`+
-      `<span class="camp-prog">${fechado ? "🏆 fechado" : liberado ? `${venc}/${total} vencidos` : "🔒 bloqueado"}</span>`+
-      `<span class="camp-bonus">💰 ${g.bonus} ao fechar</span>`;
-    if(liberado) el.onclick = ()=>renderCampanha(modo, g.idx);
-    cont.appendChild(el);
+    montarCaixaCampeonato(cont, g, modo, {
+      liberado, fechado, venc, total: g.ate - g.de + 1,
+      onOpen: ()=>renderCampanha(modo, g.idx),
+      onRefresh: ()=>renderCampanha(modo)
+    });
   });
 }
 // níveis de um campeonato
@@ -1163,14 +1207,33 @@ function renderPacotes(){
     const topRar = Object.entries(pac.dist).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,3)
       .map(([r,v])=>`${r} ${v}%`).join(" · ");
     el.innerHTML =
+      `<span class="pacote-info-i" title="Ver chances" role="button">i</span>`+
       `<span class="pacote-emoji">${pac.emoji}</span>`+
       `<span class="pacote-nome">${pac.nome}</span>`+
       `<span class="pacote-chances">${topRar}</span>`+
       `<span class="pacote-preco">💰 ${pac.preco} · 2 cartas</span>`;
     el.onclick = ()=>abrirPacote(pac);
+    el.querySelector(".pacote-info-i").onclick = (e)=>{ e.stopPropagation(); abrirInfoPacote(pac); };
     cont.appendChild(el);
   });
 }
+// pop-up com os percentuais de cada raridade do pacote
+const ORDEM_RARIDADE = ["Comum","Incomum","Raro","Super Raro","Lendário","Lendário Supremo","Mítico"];
+function abrirInfoPacote(pac){
+  $("#pac-info-titulo").textContent = `${pac.emoji} ${pac.nome} — chances`;
+  const lista = $("#pac-info-lista");
+  lista.innerHTML = ORDEM_RARIDADE.map(r=>{
+    const v = pac.dist[r] || 0;
+    return `<div class="pac-info-linha${v?"":" zero"}">
+        <span class="pac-info-rar">${r}</span>
+        <span class="pac-info-bar"><span style="width:${v}%"></span></span>
+        <span class="pac-info-pct">${v}%</span>
+      </div>`;
+  }).join("");
+  $("#pac-info-sub").textContent = `Cada pacote vem com 2 cartas · sorteadas por estas chances.`;
+  $("#modal-pacote-info").hidden = false;
+}
+function fecharInfoPacote(){ $("#modal-pacote-info").hidden = true; }
 function sortearRaridade(dist){
   const r = Math.random()*100;
   let acc = 0;
@@ -1451,8 +1514,10 @@ function flashColecao(txt){
    =================================================================== */
 let _iniOpcoes = [];
 const _iniSelec = new Set();
+let _iniRevelado = false;   // true depois de escolher as 3 (revela o resto em cinza)
 function abrirEscolhaInicial(){
   _iniSelec.clear();
+  _iniRevelado = false;
   const comuns = POKEMONS.filter(p => p.raridade === "Comum");
   _iniOpcoes = embaralhar(comuns).slice(0, 10);
   mostrarTela("tela-inicial");
@@ -1464,28 +1529,33 @@ function renderInicial(){
   _iniOpcoes.forEach(p=>{
     const sel = _iniSelec.has(p.id);
     const el = document.createElement("div");
-    el.className = "sel-item" + (sel ? " sel" : "");
+    // antes de revelar: cartas escolhidas viram (mostram a frente + círculo); resto fica virado p/ baixo
+    // depois de revelar: escolhidas circuladas; não escolhidas reveladas em cinza
+    let cls = "sel-item";
+    if(sel) cls += " sel revelada";
+    else if(_iniRevelado) cls += " revelada nao-escolhida";
+    else cls += " virada";
+    el.className = cls;
     el.dataset.id = p.id;
-    el.innerHTML = htmlCarta(p, {}) + (sel ? '<div class="sel-check">✔</div>' : "");
-    el.onclick = ()=>toggleInicial(p.id, el);
+    const face = (sel || _iniRevelado) ? htmlCarta(p, {}) : `<div class="carta-verso"></div>`;
+    el.innerHTML = face + (sel ? '<div class="sel-check">✔</div>' : "");
+    if(!_iniRevelado) el.onclick = ()=>toggleInicial(p.id, el);
     grid.appendChild(el);
   });
   $("#ini-contagem").textContent = _iniSelec.size;
   $("#btn-ini-confirmar").disabled = _iniSelec.size !== 3;
 }
 function toggleInicial(id, el){
+  if(_iniRevelado) return;
   if(_iniSelec.has(id)){ _iniSelec.delete(id); }
   else { if(_iniSelec.size >= 3){ Som.play("erro"); return; } _iniSelec.add(id); }
   Som.play("select");
-  const sel = _iniSelec.has(id);
-  el.classList.toggle("sel", sel);
-  let chk = el.querySelector(".sel-check");
-  if(sel && !chk){ chk = document.createElement("div"); chk.className = "sel-check"; chk.textContent = "✔"; el.appendChild(chk); }
-  else if(!sel && chk){ chk.remove(); }
-  const carta = el.querySelector(".carta");
-  if(carta){ carta.classList.remove("girar"); void carta.offsetWidth; carta.classList.add("girar"); }
-  $("#ini-contagem").textContent = _iniSelec.size;
-  $("#btn-ini-confirmar").disabled = _iniSelec.size !== 3;
+  const chegou3 = _iniSelec.size === 3;
+  renderInicial();
+  if(chegou3){
+    // revela as outras 7 em cinza após um instante
+    setTimeout(()=>{ _iniRevelado = true; Som.play("premio"); renderInicial(); }, 650);
+  }
 }
 function confirmarInicial(){
   if(_iniSelec.size !== 3) return;
@@ -1502,27 +1572,39 @@ function iniciarApp(){
 }
 
 /* ---------- Abertura: intro -> como funciona -> menu ---------- */
-let _introTimer = null, _introPassou = false, _comoDoInicio = true;
+let _introPassou = false, _comoDoInicio = true, _comoPasso = 0;
 function abrirIntro(){
   atualizarMenu();
   _introPassou = false;
   mostrarTela("tela-intro");
-  const seguir = ()=>{
+  const sec = $("#tela-intro");
+  if(sec) sec.onclick = ()=>{               // só avança quando o jogador clica
     if(_introPassou) return;
     _introPassou = true;
-    clearTimeout(_introTimer);
     abrirComoJogar(true);
   };
-  clearTimeout(_introTimer);
-  _introTimer = setTimeout(seguir, 3400);      // avança sozinha
-  const sec = $("#tela-intro");
-  if(sec) sec.onclick = seguir;                 // ou toque para pular
 }
+/* tutorial em passos (Anterior / Próximo / Continuar) */
 function abrirComoJogar(doInicio){
   _comoDoInicio = !!doInicio;
+  _comoPasso = 0;
   mostrarTela("tela-como");
-  const box = $("#tela-como"); if(box) box.scrollTop = 0;
+  renderComoPasso();
 }
+function renderComoPasso(){
+  const passos = document.querySelectorAll("#tut-passos .como-item");
+  const total = passos.length;
+  _comoPasso = Math.max(0, Math.min(total-1, _comoPasso));
+  passos.forEach((p,i)=> p.classList.toggle("ativo", i === _comoPasso));
+  const dots = $("#tut-dots");
+  if(dots) dots.innerHTML = Array.from({length:total},(_,i)=>
+    `<span class="tut-dot${i===_comoPasso?" on":""}"></span>`).join("");
+  const bAnt = $("#tut-anterior"), bProx = $("#tut-proximo");
+  if(bAnt) bAnt.disabled = _comoPasso === 0;
+  if(bProx) bProx.disabled = _comoPasso === total-1;
+}
+function comoPassoAnterior(){ _comoPasso--; renderComoPasso(); }
+function comoPassoProximo(){ _comoPasso++; renderComoPasso(); }
 function fecharComoJogar(){
   if(_comoDoInicio) iniciarApp();   // primeira abertura: vai p/ escolha inicial ou menu
   else irMenu();                    // aberto pelo menu: volta ao menu
@@ -1612,6 +1694,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
   abrirIntro();   // intro -> como funciona -> menu (ou escolha inicial)
   $("#btn-como-ok").addEventListener("click", fecharComoJogar);
   $("#btn-como-jogar").addEventListener("click", ()=>abrirComoJogar(false));
+  $("#tut-anterior").addEventListener("click", comoPassoAnterior);
+  $("#tut-proximo").addEventListener("click", comoPassoProximo);
 
   // Som: desbloqueia áudio no 1º gesto, clique geral nos botões, e botões de mudo
   document.addEventListener("pointerdown", ()=>Som.ensure(), {once:true});
@@ -1629,15 +1713,19 @@ document.addEventListener("DOMContentLoaded", ()=>{
   $("#btn-comprar-vida").addEventListener("click", comprarVida);
   $("#btn-reset").addEventListener("click", resetProgresso);
 
-  // modal de batalha livre (2 modos)
+  // tela de batalha livre (2 opções)
   $("#btn-livre-meu").addEventListener("click", ()=>batalhaLivre("meu"));
   $("#btn-livre-qualquer").addEventListener("click", ()=>batalhaLivre("qualquer"));
-  $("#btn-livre-cancelar").addEventListener("click", ()=>{ $("#modal-livre").hidden = true; });
-  $("#modal-livre").addEventListener("click", e=>{ if(e.target.id === "modal-livre") $("#modal-livre").hidden = true; });
+  $("#btn-livre-voltar").addEventListener("click", irMenu);
 
   $("#btn-camp-voltar").addEventListener("click", irMenu);
   $("#btn-loja-voltar").addEventListener("click", irMenu);
   $("#btn-col-voltar").addEventListener("click", irMenu);
+  // botão "Loja" no topo das telas (campanha / batalha livre)
+  document.querySelectorAll(".btn-ir-loja").forEach(b=>b.addEventListener("click", abrirLoja));
+  // info do pacote (chances)
+  $("#pac-info-fechar").addEventListener("click", fecharInfoPacote);
+  $("#modal-pacote-info").addEventListener("click", e=>{ if(e.target.id === "modal-pacote-info") fecharInfoPacote(); });
 
   // configurações
   $("#btn-config").addEventListener("click", abrirConfig);

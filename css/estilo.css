@@ -94,16 +94,27 @@ body{
 @keyframes introPulsa{0%,100%{opacity:.35}50%{opacity:1}}
 
 /* ===== COMO FUNCIONA O JOGO ===== */
-#tela-como{padding:10px 0 20px;text-align:left}
-.como-titulo{font-size:1.7rem;color:var(--amarelo);text-align:center;
+#tela-como{justify-content:center;min-height:70vh}
+.como-titulo{font-size:1.5rem;color:var(--amarelo);text-align:center;margin-bottom:6px;
   -webkit-text-stroke:1px var(--azul-esc);text-shadow:0 3px 0 var(--azul-esc)}
-.como-lista{width:100%;max-width:600px;display:flex;flex-direction:column;gap:10px}
-.como-item{display:flex;gap:12px;align-items:flex-start;background:rgba(0,0,0,.28);
-  border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:12px 14px}
-.como-ico{font-size:1.7rem;line-height:1;flex:0 0 auto}
-.como-txt b{color:var(--amarelo);font-size:1rem}
-.como-txt p{margin-top:3px;font-size:.9rem;line-height:1.45;color:#dfe8ff}
-#btn-como-ok{min-width:220px}
+/* tutorial em pop-up com passos */
+.tut-pop{width:100%;max-width:460px;background:linear-gradient(160deg,#243049,#141a2b);
+  border:2px solid rgba(255,255,255,.16);border-radius:20px;padding:22px 20px;box-shadow:var(--sombra);
+  display:flex;flex-direction:column;align-items:center;gap:14px}
+.tut-passos{width:100%;min-height:150px;display:flex;align-items:center}
+.tut-passos .como-item{display:none;width:100%;flex-direction:column;align-items:center;text-align:center;gap:8px;
+  background:transparent;border:none;padding:0;animation:fade .3s ease}
+.tut-passos .como-item.ativo{display:flex}
+.como-ico{font-size:3rem;line-height:1;flex:0 0 auto}
+.como-txt b{color:var(--amarelo);font-size:1.2rem;display:block}
+.como-txt p{margin-top:6px;font-size:.92rem;line-height:1.5;color:#dfe8ff}
+.tut-dots{display:flex;gap:7px}
+.tut-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.28)}
+.tut-dot.on{background:var(--amarelo);transform:scale(1.25)}
+.tut-nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%}
+.tut-nav .btn-sec{flex:1;min-width:110px}
+.tut-nav .btn-sec:disabled{opacity:.4;cursor:default}
+.tut-nav #btn-como-ok{flex-basis:100%;font-size:1.05rem;padding:12px}
 .menu-config{margin-top:6px;color:#cfe0ff;font-size:.95rem}
 .menu-config select{font:inherit;padding:6px 10px;border-radius:8px;border:none;margin-left:6px}
 
@@ -135,10 +146,24 @@ body{
 .loja-secao small{font-weight:600;opacity:.7;font-size:.78rem}
 #pacotes-grid{width:100%;display:grid;
   grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-.pacote-item{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+.pacote-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
   border:none;font:inherit;cursor:pointer;color:#fff;padding:14px 12px;border-radius:16px;
   background:linear-gradient(160deg,var(--pc,#666),rgba(0,0,0,.55));
   box-shadow:var(--sombra);border:2px solid rgba(255,255,255,.35);transition:transform .12s,filter .12s}
+/* botão (i) de chances no canto do pacote */
+.pacote-info-i{position:absolute;top:7px;right:8px;width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-style:italic;font-size:.9rem;
+  background:rgba(0,0,0,.5);border:1.5px solid rgba(255,255,255,.6);color:#fff;z-index:2;transition:transform .1s}
+.pacote-info-i:hover{transform:scale(1.15);background:var(--azul)}
+/* modal de chances */
+.pac-info-lista{display:flex;flex-direction:column;gap:7px;margin:6px 0 12px;text-align:left}
+.pac-info-linha{display:flex;align-items:center;gap:10px}
+.pac-info-linha.zero{opacity:.4}
+.pac-info-rar{flex:0 0 120px;font-size:.82rem;font-weight:700}
+.pac-info-bar{flex:1;height:9px;border-radius:5px;background:rgba(0,0,0,.4);overflow:hidden}
+.pac-info-bar > span{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--azul),var(--amarelo))}
+.pac-info-pct{flex:0 0 42px;text-align:right;font-weight:800;font-size:.82rem;color:var(--amarelo)}
+.pac-info-sub{font-size:.8rem;color:#cfe0ff;opacity:.85;margin-bottom:12px}
 .pacote-item:hover{transform:translateY(-4px);filter:brightness(1.12)}
 .pacote-item.caro{opacity:.55}
 .pacote-emoji{font-size:2.4rem;line-height:1}
@@ -831,6 +856,16 @@ body{
 .camp-prog{font-size:.78rem;opacity:.95}
 .camp-bonus{font-size:.76rem;font-weight:800;color:var(--amarelo);
   background:rgba(0,0,0,.3);border-radius:8px;padding:2px 8px}
+/* célula = caixa + botão de resgate embaixo */
+.camp-cell{display:flex;flex-direction:column;gap:8px}
+.camp-cell .camp-caixa{flex:1}
+.camp-ico{font-size:2.6rem;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+/* botão "Resgatar pacote" (libera ao fechar os 5; 1x só) */
+.camp-resgatar{border:none;border-radius:12px;cursor:pointer;font:inherit;font-weight:800;font-size:.86rem;
+  padding:10px;color:#1b1f2a;background:linear-gradient(150deg,#ffe08a,var(--amarelo));
+  box-shadow:var(--sombra);transition:transform .1s,filter .1s}
+.camp-resgatar:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.05)}
+.camp-resgatar.off{background:#3a4356;color:#8b96a8;cursor:default;box-shadow:none}
 /* topo com o campeonato aberto */
 .camp-topo{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;
   background:linear-gradient(120deg,var(--dk1),var(--dk2));box-shadow:var(--sombra)}
@@ -898,6 +933,22 @@ body{
   background:var(--verde);color:#fff;font-weight:900;display:flex;align-items:center;
   justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.4)}
 #btn-sel-confirmar{font-size:1rem;padding:12px 28px}
+
+/* ---- escolha inicial: 10 cartas viradas p/ baixo ---- */
+#ini-grid .sel-item .carta-verso{width:100%;height:auto;aspect-ratio:300/353;min-height:0}
+#ini-grid .sel-item.virada{filter:none}
+#ini-grid .sel-item.virada:hover{transform:translateY(-4px)}
+#ini-grid .sel-item.virada .carta-verso{transition:transform .12s,box-shadow .12s}
+#ini-grid .sel-item.virada:hover .carta-verso{box-shadow:0 0 14px rgba(255,203,5,.5)}
+/* escolhida: círculo amarelo */
+#ini-grid .sel-item.sel .carta{filter:none;outline:4px solid var(--amarelo);border-radius:18px;
+  box-shadow:0 0 16px rgba(255,203,5,.6)}
+#ini-grid .sel-item .sel-check{background:var(--amarelo);color:#1b1f2a}
+/* não escolhidas reveladas em cinza */
+#ini-grid .sel-item.nao-escolhida{cursor:default}
+#ini-grid .sel-item.nao-escolhida .carta{filter:grayscale(1) brightness(.5);opacity:.85}
+#ini-grid .sel-item.nao-escolhida:hover{transform:none}
+#ini-grid .sel-item.revelada .carta{animation:flipin .4s ease}
 
 /* ===== TELA PRÊMIO ===== */
 #tela-premio{padding-top:4vh;text-align:center;gap:12px;position:relative}

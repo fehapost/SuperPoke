@@ -50,42 +50,54 @@
     </div>
   </section>
 
-  <!-- ===== COMO FUNCIONA O JOGO ===== -->
+  <!-- ===== COMO FUNCIONA O JOGO (tutorial em passos) ===== -->
   <section id="tela-como" class="tela">
-    <h1 class="como-titulo">Como funciona o jogo</h1>
-    <div class="como-lista">
-      <div class="como-item">
-        <span class="como-ico">🃏</span>
-        <div class="como-txt"><b>As cartas</b>
-          <p>Cada Pokémon tem 6 atributos — <b>força, ataque, defesa, agilidade, vida e inteligência</b> — além de um elemento e uma raridade.</p></div>
+    <div class="tut-pop">
+      <h1 class="como-titulo">Como funciona o jogo</h1>
+      <div id="tut-passos" class="tut-passos">
+        <div class="como-item">
+          <span class="como-ico">🃏</span>
+          <div class="como-txt"><b>As cartas</b>
+            <p>Cada Pokémon tem 6 atributos — <b>força, ataque, defesa, agilidade, vida e inteligência</b> — além de um elemento e uma raridade.</p></div>
+        </div>
+        <div class="como-item">
+          <span class="como-ico">⚔️</span>
+          <div class="como-txt"><b>Classic</b>
+            <p>25 níveis. A cada rodada você escolhe um atributo da sua carta. Quem tiver o maior valor vence e <b>elimina</b> a carta do adversário. Ganha quem acabar com as cartas do outro.</p></div>
+        </div>
+        <div class="como-item">
+          <span class="como-ico">❤️</span>
+          <div class="como-txt"><b>Tournament</b>
+            <p>20 níveis. Ninguém perde cartas: a <b>diferença</b> entre os atributos vira dano nos pontos de vida. Zere a vida do oponente para vencer.</p></div>
+        </div>
+        <div class="como-item">
+          <span class="como-ico">🃏</span>
+          <div class="como-txt"><b>Campeonato</b>
+            <p>25 níveis, duelo por turnos com <b>3 ações</b> (comprar, posicionar ou atacar). Os elementos multiplicam o dano (×1,5 forte · ×0,5 fraco). O ataque gasta primeiro a <b>defesa</b>, depois a <b>vida</b> — e só cartas em <b>defesa</b> derrotadas tiram LP. Ataque só a partir da 2ª rodada.</p></div>
+        </div>
+        <div class="como-item">
+          <span class="como-ico">🏆</span>
+          <div class="como-txt"><b>Campeonatos de 5 em 5</b>
+            <p>Os níveis são agrupados em campeonatos de 5. Feche todos os 5 para ganhar um <b>bônus em moedas</b> e <b>resgatar um pacote</b> de cartas!</p></div>
+        </div>
+        <div class="como-item">
+          <span class="como-ico">💰</span>
+          <div class="como-txt"><b>Ouro e Loja</b>
+            <p>Cada vitória rende <b>ouro</b>. Gaste na Loja em pacotes de cartas, pontos de vida e LP para ficar mais forte.</p></div>
+        </div>
+        <div class="como-item">
+          <span class="como-ico">📚</span>
+          <div class="como-txt"><b>Coleção</b>
+            <p>Todas as cartas que você conquistou ficam na Coleção — e formam o baralho dos seus duelos.</p></div>
+        </div>
       </div>
-      <div class="como-item">
-        <span class="como-ico">⚔️</span>
-        <div class="como-txt"><b>Classic</b>
-          <p>25 níveis. A cada rodada você escolhe um atributo da sua carta. Quem tiver o maior valor vence e <b>elimina</b> a carta do adversário. Ganha quem acabar com as cartas do outro.</p></div>
-      </div>
-      <div class="como-item">
-        <span class="como-ico">❤️</span>
-        <div class="como-txt"><b>Life Tournament</b>
-          <p>20 níveis. Ninguém perde cartas: a <b>diferença</b> entre os atributos vira dano nos pontos de vida. Zere a vida do oponente para vencer.</p></div>
-      </div>
-      <div class="como-item">
-        <span class="como-ico">🏆</span>
-        <div class="como-txt"><b>Championship</b>
-          <p>25 níveis, duelo por turnos com <b>3 ações</b> (comprar, posicionar ou atacar). Os elementos multiplicam o dano (×1,5 forte · ×0,5 fraco). O ataque gasta primeiro a <b>defesa</b>, depois a <b>vida</b> — e só cartas em <b>defesa</b> derrotadas tiram LP. Ataque só a partir da 2ª rodada.</p></div>
-      </div>
-      <div class="como-item">
-        <span class="como-ico">💰</span>
-        <div class="como-txt"><b>Ouro e Loja</b>
-          <p>Cada vitória rende <b>ouro</b>. Gaste na Loja em pacotes de cartas, pontos de vida e LP para ficar mais forte.</p></div>
-      </div>
-      <div class="como-item">
-        <span class="como-ico">📚</span>
-        <div class="como-txt"><b>Coleção</b>
-          <p>Todas as cartas que você conquistou ficam na Coleção — e formam o baralho dos seus duelos.</p></div>
+      <div id="tut-dots" class="tut-dots"></div>
+      <div class="tut-nav">
+        <button class="btn btn-sec" id="tut-anterior">← Anterior</button>
+        <button class="btn btn-sec" id="tut-proximo">Próximo →</button>
+        <button class="btn btn-grande" id="btn-como-ok">Continuar ▶</button>
       </div>
     </div>
-    <button class="btn btn-grande" id="btn-como-ok">OK</button>
   </section>
 
   <!-- ===== TELA INICIAL ===== -->
@@ -117,7 +129,7 @@
       <button class="menu-quad q-classic" id="btn-campanha">
         <span class="mq-ico">⚔️</span><span class="mq-txt">Classic</span></button>
       <button class="menu-quad q-champ" id="btn-campanha-super">
-        <span class="mq-ico">🃏</span><span class="mq-txt">Championship</span></button>
+        <span class="mq-ico">🃏</span><span class="mq-txt">Campeonato</span></button>
       <button class="menu-quad q-tour" id="btn-campanha-vida">
         <span class="mq-ico">❤️</span><span class="mq-txt">Tournament</span></button>
       <button class="menu-quad q-livre" id="btn-livre">
@@ -145,7 +157,7 @@
         <button class="btn btn-grande" id="btn-ini-confirmar" disabled>Começar ▶</button>
       </div>
     </header>
-    <p class="sub-desc">Sorteamos 10 Pokémon comuns. Clique em <b>3</b> para montar seu baralho inicial!</p>
+    <p class="sub-desc">10 cartas viradas para baixo. Clique em <b>3</b> para revelá-las e montar seu baralho inicial!</p>
     <div id="ini-grid"></div>
   </section>
 
@@ -179,10 +191,41 @@
     <header class="sub-header">
       <h2 id="camp-titulo">⚔️ Campanha</h2>
       <span class="chip">💰 <b id="camp-pontos">0</b> pts</span>
+      <button class="btn btn-sec btn-ir-loja" id="btn-camp-loja">🛒 Loja</button>
       <button class="btn btn-sec" id="btn-camp-voltar">Voltar</button>
     </header>
     <p class="sub-desc" id="camp-desc">Derrote os oponentes em ordem — cada um é mais forte que o anterior. Cada vitória rende ouro.</p>
     <div id="campanha-lista"></div>
+  </section>
+
+  <!-- ===== TELA BATALHA LIVRE (2 opções) ===== -->
+  <section id="tela-livre" class="tela">
+    <header class="sub-header">
+      <h2>⚡ Batalha livre</h2>
+      <button class="btn btn-sec btn-ir-loja">🛒 Loja</button>
+      <button class="btn btn-sec" id="btn-livre-voltar">Voltar</button>
+    </header>
+    <p class="sub-desc">Como você quer batalhar?</p>
+    <div id="livre-lista" class="camp-grid">
+      <div class="camp-cell">
+        <button class="camp-caixa atual" id="btn-livre-meu" style="--dk1:#3bb54a;--dk2:#1c6b26">
+          <span class="camp-ico">🏅</span>
+          <span class="camp-nome">Com seus Pokémon</span>
+          <span class="camp-dif">ganha ouro</span>
+          <span class="camp-prog">Usa seu time favorito</span>
+          <span class="camp-bonus">pode achar lendários</span>
+        </button>
+      </div>
+      <div class="camp-cell">
+        <button class="camp-caixa atual" id="btn-livre-qualquer" style="--dk1:#8e5ce0;--dk2:#4a2790">
+          <span class="camp-ico">🎲</span>
+          <span class="camp-nome">Com qualquer Pokémon</span>
+          <span class="camp-dif">sem ouro</span>
+          <span class="camp-prog">Aleatórios dos dois lados</span>
+          <span class="camp-bonus">só diversão</span>
+        </button>
+      </div>
+    </div>
   </section>
 
   <!-- ===== TELA LOJA ===== -->
@@ -501,21 +544,15 @@
   </div>
 
   <!-- ===== MODAL BATALHA LIVRE (2 modos) ===== -->
-  <div id="modal-livre" class="modal" hidden>
+  <!-- (batalha livre virou a tela #tela-livre) -->
+
+  <!-- ===== MODAL INFO DO PACOTE (chances) ===== -->
+  <div id="modal-pacote-info" class="modal" hidden>
     <div class="modal-box">
-      <h2>⚡ Batalha livre</h2>
-      <p style="color:#dfe8ff;margin-bottom:16px">Como você quer batalhar?</p>
-      <div class="livre-opcoes">
-        <button class="btn livre-op" id="btn-livre-meu">
-          <span class="op-titulo">🏅 Com seus Pokémon</span>
-          <span class="op-desc">Usa seu time favorito · <b>ganha ouro</b> e pode achar lendários!</span>
-        </button>
-        <button class="btn livre-op sec" id="btn-livre-qualquer">
-          <span class="op-titulo">🎲 Com qualquer Pokémon</span>
-          <span class="op-desc">Pokémon aleatórios dos dois lados · <b>sem ouro</b>, só diversão.</span>
-        </button>
-      </div>
-      <button class="btn btn-sec" id="btn-livre-cancelar">Cancelar</button>
+      <h2 id="pac-info-titulo">Chances</h2>
+      <div id="pac-info-lista" class="pac-info-lista"></div>
+      <p id="pac-info-sub" class="pac-info-sub"></p>
+      <button class="btn btn-sec" id="pac-info-fechar">Fechar</button>
     </div>
   </div>
 
