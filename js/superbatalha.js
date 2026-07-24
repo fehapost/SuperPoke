@@ -182,6 +182,16 @@ function sbIniciarTurno(quem){
   sb.selecao = null;
   sb.travado = quem === "cpu";
   (quem === "jogador" ? sb.campoJog : sb.campoCpu).forEach(s=>s.jaAtacou = false);
+  if(quem === "jogador"){
+    // snapshot do início do turno para o "cancelar ações" (desfazer)
+    sb.snapshotTurno = {
+      campoJog: sb.campoJog.map(s=>({...s})),
+      campoCpu: sb.campoCpu.map(s=>({...s})),
+      maoJog: sb.maoJog.slice(),
+      lpJog: sb.lpJog, lpCpu: sb.lpCpu
+    };
+    sb.compradasNoTurno = [];   // cartas compradas neste turno (não são desfeitas)
+  }
   sbDesenhar();
   if(quem === "cpu"){ setTimeout(sbPassoCPU, 800); return; }
   // jogador: 60s por turno, senão perde a vez
@@ -206,7 +216,26 @@ function sbGastarAcao(){
 // pergunta "Finalizar rodada?" quando o jogador usou as 3 ações
 function sbPerguntarFinalizar(){
   const m = $("#modal-sb-rodada"); if(!m){ sbEncerrarTurno(); return; }
+  const draws = sb.compradasNoTurno ? sb.compradasNoTurno.length : 0;
+  const bc = $("#sb-rodada-cancelar");
+  if(bc) bc.disabled = !sb.snapshotTurno || draws >= 3;   // se as 3 ações foram compras, nada a desfazer
   m.hidden = false;
+}
+// desfaz as ações do turno (posicionar/atacar/sacrificar/descartar) mantendo as cartas compradas
+function sbCancelarAcoes(){
+  const m = $("#modal-sb-rodada"); if(m) m.hidden = true;
+  const snap = sb.snapshotTurno; if(!snap) return;
+  const compradas = (sb.compradasNoTurno || []).slice();
+  sb.campoJog = snap.campoJog.map(s=>({...s}));
+  sb.campoCpu = snap.campoCpu.map(s=>({...s}));
+  sb.lpJog = snap.lpJog; sb.lpCpu = snap.lpCpu;
+  sb.maoJog = snap.maoJog.slice().concat(compradas);   // mão inicial + cartas compradas
+  sb.acoes = Math.max(0, 3 - compradas.length);          // ações de compra continuam gastas
+  sb.selecao = null; sb.travado = false;
+  Som.play("select");
+  sbLog("↩️ Ações canceladas — cartas compradas mantidas.");
+  sbDesenhar();
+  if(sb.acoes <= 0) sbPerguntarFinalizar();               // só sobraram compras: volta a perguntar
 }
 function sbEncerrarTurno(){
   if(sb.fim) return;
@@ -224,6 +253,7 @@ function sbComprar(){
   Som.play("select");
   sbAnimarCompra(carta, ()=>{
     sb.maoJog.push(carta);
+    (sb.compradasNoTurno || (sb.compradasNoTurno=[])).push(carta);
     sb.travado = false;
     sbLog(`Você comprou ${carta.nome}.`);
     sbGastarAcao();
@@ -843,6 +873,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const bcancel = $("#sb-colocar-cancelar"); if(bcancel) bcancel.addEventListener("click", sbFecharModalColocar);
   const bok = $("#sb-fim-pop-ok"); if(bok) bok.addEventListener("click", ()=>{ const p=$("#sb-fim-pop"); if(p) p.hidden=true; sbFim(sb.lpCpu <= 0); });
   const bRod = $("#sb-rodada-ok"); if(bRod) bRod.addEventListener("click", ()=>{ const m=$("#modal-sb-rodada"); if(m) m.hidden=true; sbEncerrarTurno(); });
+  const bRodC = $("#sb-rodada-cancelar"); if(bRodC) bRodC.addEventListener("click", ()=>{ if(!bRodC.disabled) sbCancelarAcoes(); });
   // menu da carta no campo (atacar / descartar / sacrificar)
   const bAcCancel = $("#sb-acao-cancelar"); if(bAcCancel) bAcCancel.addEventListener("click", sbFecharModalAcao);
   const mAcao = $("#modal-sb-acao"); if(mAcao) mAcao.addEventListener("click", e=>{ if(e.target.id==="modal-sb-acao") sbFecharModalAcao(); });
