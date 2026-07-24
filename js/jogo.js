@@ -1381,6 +1381,33 @@ function iniciarApp(){
   else irMenu();
 }
 
+/* ---------- Abertura: intro -> como funciona -> menu ---------- */
+let _introTimer = null, _introPassou = false, _comoDoInicio = true;
+function abrirIntro(){
+  atualizarMenu();
+  _introPassou = false;
+  mostrarTela("tela-intro");
+  const seguir = ()=>{
+    if(_introPassou) return;
+    _introPassou = true;
+    clearTimeout(_introTimer);
+    abrirComoJogar(true);
+  };
+  clearTimeout(_introTimer);
+  _introTimer = setTimeout(seguir, 3400);      // avança sozinha
+  const sec = $("#tela-intro");
+  if(sec) sec.onclick = seguir;                 // ou toque para pular
+}
+function abrirComoJogar(doInicio){
+  _comoDoInicio = !!doInicio;
+  mostrarTela("tela-como");
+  const box = $("#tela-como"); if(box) box.scrollTop = 0;
+}
+function fecharComoJogar(){
+  if(_comoDoInicio) iniciarApp();   // primeira abertura: vai p/ escolha inicial ou menu
+  else irMenu();                    // aberto pelo menu: volta ao menu
+}
+
 /* ===================================================================
    MENU
    =================================================================== */
@@ -1452,7 +1479,9 @@ function atualizarSomUI(){
 
 /* ---------- Ligações de UI ---------- */
 document.addEventListener("DOMContentLoaded", ()=>{
-  iniciarApp();   // menu, ou escolha inicial se ainda não tem cartas
+  abrirIntro();   // intro -> como funciona -> menu (ou escolha inicial)
+  $("#btn-como-ok").addEventListener("click", fecharComoJogar);
+  $("#btn-como-jogar").addEventListener("click", ()=>abrirComoJogar(false));
 
   // Som: desbloqueia áudio no 1º gesto, clique geral nos botões, e botões de mudo
   document.addEventListener("pointerdown", ()=>Som.ensure(), {once:true});

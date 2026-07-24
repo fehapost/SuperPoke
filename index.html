@@ -36,8 +36,60 @@
 <body>
 <div id="app">
 
+  <!-- ===== INTRO ===== -->
+  <section id="tela-intro" class="tela ativa">
+    <div class="intro-palco">
+      <div class="intro-raios"></div>
+      <div class="intro-pokeball"><span class="intro-pk-btn"></span></div>
+      <div class="logo intro-logo">
+        <span class="logo-super">SUPER</span>
+        <span class="logo-pokemon">POKÉMON</span>
+        <span class="logo-sub">JOGO DE CARTAS</span>
+      </div>
+      <div class="intro-dica">toque para continuar</div>
+    </div>
+  </section>
+
+  <!-- ===== COMO FUNCIONA O JOGO ===== -->
+  <section id="tela-como" class="tela">
+    <h1 class="como-titulo">Como funciona o jogo</h1>
+    <div class="como-lista">
+      <div class="como-item">
+        <span class="como-ico">🃏</span>
+        <div class="como-txt"><b>As cartas</b>
+          <p>Cada Pokémon tem 6 atributos — <b>força, ataque, defesa, agilidade, vida e inteligência</b> — além de um elemento e uma raridade.</p></div>
+      </div>
+      <div class="como-item">
+        <span class="como-ico">⚔️</span>
+        <div class="como-txt"><b>Classic</b>
+          <p>25 níveis. A cada rodada você escolhe um atributo da sua carta. Quem tiver o maior valor vence e <b>elimina</b> a carta do adversário. Ganha quem acabar com as cartas do outro.</p></div>
+      </div>
+      <div class="como-item">
+        <span class="como-ico">❤️</span>
+        <div class="como-txt"><b>Life Tournament</b>
+          <p>20 níveis. Ninguém perde cartas: a <b>diferença</b> entre os atributos vira dano nos pontos de vida. Zere a vida do oponente para vencer.</p></div>
+      </div>
+      <div class="como-item">
+        <span class="como-ico">🏆</span>
+        <div class="como-txt"><b>Championship</b>
+          <p>25 níveis, duelo por turnos com <b>3 ações</b> (comprar, posicionar ou atacar). Os elementos multiplicam o dano (×1,5 forte · ×0,5 fraco). O ataque gasta primeiro a <b>defesa</b>, depois a <b>vida</b> — e só cartas em <b>defesa</b> derrotadas tiram LP. Ataque só a partir da 2ª rodada.</p></div>
+      </div>
+      <div class="como-item">
+        <span class="como-ico">💰</span>
+        <div class="como-txt"><b>Ouro e Loja</b>
+          <p>Cada vitória rende <b>ouro</b>. Gaste na Loja em pacotes de cartas, pontos de vida e LP para ficar mais forte.</p></div>
+      </div>
+      <div class="como-item">
+        <span class="como-ico">📚</span>
+        <div class="como-txt"><b>Coleção</b>
+          <p>Todas as cartas que você conquistou ficam na Coleção — e formam o baralho dos seus duelos.</p></div>
+      </div>
+    </div>
+    <button class="btn btn-grande" id="btn-como-ok">OK</button>
+  </section>
+
   <!-- ===== TELA INICIAL ===== -->
-  <section id="tela-menu" class="tela ativa">
+  <section id="tela-menu" class="tela">
     <div class="logo">
       <span class="logo-super">SUPER</span>
       <span class="logo-pokemon">POKÉMON</span>
@@ -61,15 +113,14 @@
       Vença batalhas, ganhe pontos e compre cartas melhores na <b>Loja</b>!
     </p>
 
-    <div class="menu-botoes">
-      <button class="btn btn-grande" id="btn-campanha">⚔️ CLASSIC</button>
-      <button class="btn btn-grande btn-super" id="btn-campanha-super">🃏 CHAMPIONSHIP</button>
-      <button class="btn btn-grande btn-vida" id="btn-campanha-vida">❤️ LIFE TOURNAMENT</button>
-    </div>
-    <div class="menu-botoes">
-      <button class="btn btn-sec" id="btn-loja">🛒 Loja</button>
-      <button class="btn btn-sec" id="btn-colecao">🃏 Coleção</button>
-      <button class="btn btn-sec" id="btn-livre">⚡ Batalha livre</button>
+    <div class="menu-vertical">
+      <button class="btn menu-btn" id="btn-campanha">⚔️ CLASSIC</button>
+      <button class="btn menu-btn btn-super" id="btn-campanha-super">🃏 CHAMPIONSHIP</button>
+      <button class="btn menu-btn btn-vida" id="btn-campanha-vida">❤️ LIFE TOURNAMENT</button>
+      <button class="btn menu-btn btn-sec" id="btn-loja">🛒 LOJA</button>
+      <button class="btn menu-btn btn-sec" id="btn-colecao">🃏 COLEÇÃO</button>
+      <button class="btn menu-btn btn-sec" id="btn-livre">⚡ BATALHA LIVRE</button>
+      <button class="btn menu-btn btn-sec" id="btn-como-jogar">❔ COMO JOGAR</button>
     </div>
     <div class="menu-botoes">
       <button class="btn btn-reset js-som">🔊</button>
