@@ -149,6 +149,69 @@ const VIDA_INICIAL = 50;
 const VIDA_INCREMENTO = 10;                                  // compra de vida de 10 em 10
 function custoVida(){ return Math.round(progresso.vidaMax * 0.8); }   // preço para +10 de vida
 
+/* ===== CAMPEONATOS: cada 5 níveis formam um campeonato ==========================
+   Cada campeonato tem cenário, dificuldade, COR das cartas dos oponentes
+   e um bônus em moedas pago ao fechar (vencer os 5 níveis).                      */
+const TIERS_CAMPEONATO = [
+  {cor:["#3bb54a","#1c6b26"], dif:"Iniciante", bonus:150},    // verde
+  {cor:["#f5c518","#9c7605"], dif:"Fácil",     bonus:500},    // amarelo
+  {cor:["#2a75bb","#12406e"], dif:"Médio",     bonus:1200},   // azul
+  {cor:["#8e5ce0","#4a2790"], dif:"Difícil",   bonus:2500},   // roxo
+  {cor:["#e3350d","#8a1a05"], dif:"Mestre",    bonus:5000}    // rubi
+];
+const CENARIOS = {
+  normal: ["Bosque Inicial","Cavernas de Âmbar","Costa Safira","Torre Ametista","Coliseu Rubi"],
+  vida:   ["Arena do Vale","Fossos de Âmbar","Abismo Safira","Santuário Ametista","Coliseu Rubi"],
+  super:  ["Duelódromo Verde","Arena Âmbar","Domo Safira","Templo Ametista","Trono Rubi"]
+};
+function maxNivelDoModo(modo){
+  if(modo === "vida")  return MAX_NIVEL_VIDA;
+  if(modo === "super") return (typeof MAX_NIVEL_SUPER !== "undefined") ? MAX_NIVEL_SUPER : 25;
+  return MAX_NIVEL;
+}
+function nivelAtualDoModo(modo){
+  if(modo === "vida")  return progresso.nivelVida;
+  if(modo === "super") return progresso.nivelSuper || 1;
+  return progresso.nivel;
+}
+// grupos de 5 níveis
+function campeonatosDoModo(modo){
+  const total = maxNivelDoModo(modo);
+  const nomes = CENARIOS[modo] || CENARIOS.normal;
+  const grupos = [];
+  for(let i = 0; i*5 < total; i++){
+    const t = TIERS_CAMPEONATO[Math.min(i, TIERS_CAMPEONATO.length-1)];
+    grupos.push({
+      idx:i, modo, nome:nomes[i] || ("Campeonato " + (i+1)),
+      dif:t.dif, cor:t.cor, bonus:t.bonus,
+      de:i*5 + 1, ate:Math.min(total, i*5 + 5)
+    });
+  }
+  return grupos;
+}
+function campeonatoDoNivel(modo, nivel){
+  return campeonatosDoModo(modo)[Math.floor((nivel-1)/5)] || null;
+}
+function corCampeonato(modo, nivel){
+  const g = campeonatoDoNivel(modo, nivel);
+  return g ? g.cor : ["#5a3ea5","#432c86"];
+}
+// paga o bônus ao vencer o último nível do campeonato (uma única vez)
+function premiarCampeonato(modo, nivelVencido){
+  const g = campeonatoDoNivel(modo, nivelVencido);
+  if(!g || nivelVencido !== g.ate) return null;
+  progresso.campeonatos = progresso.campeonatos || {};
+  const chave = modo + "-" + g.idx;
+  if(progresso.campeonatos[chave]) return null;      // já pago
+  progresso.campeonatos[chave] = true;
+  progresso.pontos += g.bonus;
+  salvarProgresso();
+  return g;
+}
+function campeonatoFechado(modo, idx){
+  return !!(progresso.campeonatos && progresso.campeonatos[modo + "-" + idx]);
+}
+
 let progresso = carregarProgresso();
 
 function progressoPadrao(){
@@ -156,7 +219,7 @@ function progressoPadrao(){
   return { owned: [], pontos: 0, nivel: 1, vitorias: 0, derrotas: 0,
            timeFavorito: [], nome: "Treinador", foto: "🧑",
            nivelVida: 1, vidaMax: VIDA_INICIAL, campanhaZerada: false,
-           nivelSuper: 1, lpSuper: 100 };
+           nivelSuper: 1, lpSuper: 100, campeonatos: {} };
 }
 function carregarProgresso(){
   try{
@@ -174,6 +237,7 @@ function carregarProgresso(){
         if(typeof o.campanhaZerada !== "boolean") o.campanhaZerada = (o.nivel > MAX_NIVEL);
         if(typeof o.nivelSuper !== "number") o.nivelSuper = 1;
         if(typeof o.lpSuper !== "number") o.lpSuper = 100;
+        if(!o.campeonatos || typeof o.campeonatos !== "object") o.campeonatos = {};
         return o;
       }
     }
@@ -273,6 +337,11 @@ function iniciarBatalha(deckJogador, deckCpu, contexto){
   estado.hpJogador = estado.hpJogadorMax;
   estado.hpCpu = estado.hpCpuMax;
   document.querySelector("#tela-jogo").classList.toggle("modo-vida", estado.modoVida);
+  // cor das cartas do oponente = cor do campeonato daquele nível
+  const modoCamp = contexto.tipo === "campanha-vida" ? "vida" : "normal";
+  const cor = contexto.nivel ? corCampeonato(modoCamp, contexto.nivel) : ["#5a3ea5","#432c86"];
+  const tj = document.querySelector("#tela-jogo");
+  tj.style.setProperty("--dk1", cor[0]); tj.style.setProperty("--dk2", cor[1]);
   $("#log").innerHTML = "";
   $("#efeito-camada").className = "";
   $("#oponente-info").textContent = contexto.titulo || "";
@@ -867,11 +936,13 @@ function finalizar(empate){
       progresso.vitorias = (progresso.vitorias||0) + 1;
       if(primeiraVez && progresso.nivelVida < MAX_NIVEL_VIDA) progresso.nivelVida++;
       salvarProgresso();
+      var campFechado = primeiraVez ? premiarCampeonato("vida", ctx.nivel) : null;
       _marcoPremio = premiarMarcoVitoria();
       const zerou = primeiraVez && ctx.nivel === MAX_NIVEL_VIDA;
       t.textContent = zerou ? "👑 LENDA!" : "🏆 VITÓRIA!"; t.classList.add("venceu");
       s.innerHTML = `Você derrotou <b>${info.nome}</b> com ${estado.hpJogador} de vida restante!<br>`+
         `<span class="ganho">+${ganho} de ouro</span>${primeiraVez?' <span class="bonus">(bônus 1ª vez)</span>':''}`+
+        (campFechado ? `<br><span class="camp-fechado-msg">🏆 Campeonato <b>${campFechado.nome}</b> fechado — <span class="ganho">+${campFechado.bonus} moedas!</span></span>` : "")+
         (zerou ? "<br>🎉 Você zerou a Campanha Vida!" : "");
     } else {
       Som.play("perderPartida");
@@ -897,11 +968,13 @@ function finalizar(empate){
       const zerou = primeiraVez && ctx.nivel === MAX_NIVEL;
       if(zerou) progresso.campanhaZerada = true;   // desbloqueia a loja de cartas avulsas
       salvarProgresso();
+      const campFec = primeiraVez ? premiarCampeonato("normal", ctx.nivel) : null;
       _marcoPremio = premiarMarcoVitoria();
       t.textContent = zerou ? "👑 CAMPEÃO!" : "🏆 VITÓRIA!";
       t.classList.add("venceu");
       s.innerHTML = `Você derrotou <b>${info.nome}</b>!<br>`+
         `<span class="ganho">+${ganho} de ouro</span>${primeiraVez?' <span class="bonus">(bônus 1ª vez)</span>':''} · Saldo: <b>${progresso.pontos}</b>`+
+        (campFec ? `<br><span class="camp-fechado-msg">🏆 Campeonato <b>${campFec.nome}</b> fechado — <span class="ganho">+${campFec.bonus} moedas!</span></span>` : "")+
         `<br><small>Use o ouro na <b>Loja</b> para comprar pacotes de cartas!</small>`+
         (zerou ? "<br>🎉 Você zerou a campanha — loja de cartas avulsas liberada!" : "");
     } else {
@@ -969,7 +1042,11 @@ function mostrarMarcoNoFim(premio){
 }
 function abrirCampanha(){ renderCampanha("normal"); }
 function abrirCampanhaVida(){ renderCampanha("vida"); }
-function renderCampanha(modo){
+
+/* ---------- Tela de campanha: caixas de campeonato -> níveis ---------- */
+let _campGrupoAberto = null;   // {modo, idx} do campeonato aberto (null = lista de campeonatos)
+function renderCampanha(modo, grupoIdx){
+  _campGrupoAberto = (grupoIdx === undefined || grupoIdx === null) ? null : {modo, idx:grupoIdx};
   const vida = modo === "vida";
   mostrarTela("tela-campanha");
   $("#camp-pontos").textContent = progresso.pontos;
@@ -977,16 +1054,59 @@ function renderCampanha(modo){
   $("#camp-desc").innerHTML = vida
     ? "<b>Life Tournament</b> — duelo por pontos de vida: o dano é a diferença do atributo. Compre mais vida na loja!"
     : "<b>Classic</b> — derrote os oponentes em ordem eliminando as cartas deles. Cada vitória rende ouro.";
-  const lista = vida ? NIVEIS_VIDA : NIVEIS;
-  const nivelAtual = vida ? progresso.nivelVida : progresso.nivel;
   const cont = $("#campanha-lista");
+  if(_campGrupoAberto) renderNiveisDoCampeonato(modo, grupoIdx, cont);
+  else renderCaixasCampeonato(modo, cont);
+}
+// grade com as caixas dos campeonatos (grupos de 5 níveis)
+function renderCaixasCampeonato(modo, cont){
+  cont.className = "camp-grid";
   cont.innerHTML = "";
+  const nivelAtual = nivelAtualDoModo(modo);
+  campeonatosDoModo(modo).forEach(g=>{
+    const liberado = nivelAtual >= g.de;
+    const fechado  = campeonatoFechado(modo, g.idx) || nivelAtual > g.ate;
+    const el = document.createElement("button");
+    el.className = "camp-caixa" + (fechado ? " fechado" : liberado ? " atual" : " bloqueado");
+    el.disabled = !liberado;
+    el.style.setProperty("--dk1", g.cor[0]);
+    el.style.setProperty("--dk2", g.cor[1]);
+    const venc = Math.max(0, Math.min(g.ate, nivelAtual-1) - g.de + 1);
+    const total = g.ate - g.de + 1;
+    el.innerHTML =
+      `<span class="camp-cartinha"></span>`+
+      `<span class="camp-nome">${g.nome}</span>`+
+      `<span class="camp-dif">${g.dif}</span>`+
+      `<span class="camp-prog">${fechado ? "🏆 fechado" : liberado ? `${venc}/${total} vencidos` : "🔒 bloqueado"}</span>`+
+      `<span class="camp-bonus">💰 ${g.bonus} ao fechar</span>`;
+    if(liberado) el.onclick = ()=>renderCampanha(modo, g.idx);
+    cont.appendChild(el);
+  });
+}
+// níveis de um campeonato
+function renderNiveisDoCampeonato(modo, grupoIdx, cont){
+  const vida = modo === "vida";
+  const g = campeonatosDoModo(modo)[grupoIdx];
+  const lista = (vida ? NIVEIS_VIDA : NIVEIS).filter(i=>i.n >= g.de && i.n <= g.ate);
+  const nivelAtual = nivelAtualDoModo(modo);
+  cont.className = "";
+  cont.innerHTML = "";
+  const topo = document.createElement("div");
+  topo.className = "camp-topo";
+  topo.style.setProperty("--dk1", g.cor[0]);
+  topo.style.setProperty("--dk2", g.cor[1]);
+  topo.innerHTML = `<button class="btn btn-sec btn-camp-voltar">← Campeonatos</button>`+
+    `<span class="camp-topo-info"><b>${g.nome}</b><small>${g.dif} · níveis ${g.de}–${g.ate} · 💰 ${g.bonus} ao fechar</small></span>`;
+  topo.querySelector(".btn-camp-voltar").onclick = ()=>renderCampanha(modo);
+  cont.appendChild(topo);
   lista.forEach(info=>{
     const estadoNivel = info.n < nivelAtual ? "vencido"
                       : info.n === nivelAtual ? "atual" : "bloqueado";
     const el = document.createElement("button");
     el.className = "nivel-item " + estadoNivel;
     el.disabled = estadoNivel === "bloqueado";
+    el.style.setProperty("--dk1", g.cor[0]);
+    el.style.setProperty("--dk2", g.cor[1]);
     const tag = estadoNivel==="vencido" ? "✔ vencido"
               : estadoNivel==="atual" ? "▶ Desafiar" : "🔒 bloqueado";
     const bonus = info.n === nivelAtual ? (vida ? 60 : bonusPrimeiraVez()) : 0;
@@ -995,7 +1115,7 @@ function renderCampanha(modo){
       ? `<small class="nivel-ouro">❤ ${vidaOponente(info.n)} vida · 💰 ${ouro}</small>`
       : `<small class="nivel-ouro">💰 ${ouro} de ouro${bonus?" (1ª vez)":""}</small>`;
     el.innerHTML =
-      `<span class="nivel-num">${info.n}</span>`+
+      `<span class="nivel-num nivel-tema">${info.n}</span>`+
       `<span class="nivel-info"><b>${info.nome}</b>`+
       `<small>${info.raridades.join(" · ")}</small>${infoExtra}</span>`+
       `<span class="nivel-tag">${tag}</span>`;
@@ -1464,6 +1584,16 @@ function salvarConfig(){
   irMenu();
 }
 
+/* ---------- Confirmação de saída da batalha ---------- */
+let _sairConfirmado = null;   // callback executado ao confirmar
+function pedirConfirmacaoSaida(aoConfirmar){
+  const m = $("#modal-sair");
+  if(!m){ aoConfirmar(); return; }
+  _sairConfirmado = aoConfirmar;
+  m.hidden = false;
+}
+function fecharConfirmacaoSaida(){ const m = $("#modal-sair"); if(m) m.hidden = true; _sairConfirmado = null; }
+
 /* ---------- Regras ---------- */
 function abrirRegras(){ $("#modal-regras").hidden = false; }
 function fecharRegras(){ $("#modal-regras").hidden = true; }
@@ -1549,11 +1679,20 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   // Sair: encerra a batalha IMEDIATAMENTE (sem confirmação)
   $("#btn-sair").addEventListener("click", ()=>{
-    limparTimers();
-    estado.abortado = true; estado.travado = true;   // encerra o duelo imediatamente
-    const ctx = estado.contexto || {};
-    if(ctx.tipo === "campanha-vida") abrirCampanhaVida();
-    else if(ctx.tipo === "campanha") abrirCampanha();
-    else irMenu();
+    pedirConfirmacaoSaida(()=>{
+      limparTimers();
+      estado.abortado = true; estado.travado = true;   // encerra o duelo imediatamente
+      const ctx = estado.contexto || {};
+      if(ctx.tipo === "campanha-vida") abrirCampanhaVida();
+      else if(ctx.tipo === "campanha") abrirCampanha();
+      else irMenu();
+    });
+  });
+  $("#btn-sair-nao").addEventListener("click", fecharConfirmacaoSaida);
+  $("#modal-sair").addEventListener("click", e=>{ if(e.target.id === "modal-sair") fecharConfirmacaoSaida(); });
+  $("#btn-sair-sim").addEventListener("click", ()=>{
+    const cb = _sairConfirmado;
+    fecharConfirmacaoSaida();
+    if(cb) cb();
   });
 });

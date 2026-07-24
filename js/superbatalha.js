@@ -68,8 +68,8 @@ const MAX_NIVEL_SUPER = NIVEIS_SUPER.length;
 function ouroNivelSuper(nivel){ return 5 * (25 + nivel*15); }
 // cores da pilha de compra do jogador — sorteada de novo a cada carta comprada
 const SB_CORES_BARALHO = [
-  ["#e3350d","#8a1a05"], ["#f5c518","#b38a06"], ["#2a75bb","#12406e"], ["#3bb54a","#1c6b26"],
-  ["#f0902c","#a8560c"], ["#8e5ce0","#4a2790"], ["#17b3b8","#0a6165"], ["#ec4899","#8f1e56"]
+  ["#e3350d","#8a1a05"], ["#f5c518","#9c7605"], ["#2a75bb","#12406e"], ["#3bb54a","#1c6b26"],
+  ["#4b3fd6","#221a86"], ["#8e5ce0","#4a2790"], ["#17b3b8","#0a6165"], ["#ec4899","#8f1e56"]
 ];
 function sbSortearCorBaralho(){
   sb.corBaralho = SB_CORES_BARALHO[Math.floor(Math.random()*SB_CORES_BARALHO.length)];
@@ -106,27 +106,64 @@ function sbNovoSlot(carta, modo, cima){
   s.vidaMax  = carta.vida;
   return s;
 }
+// tira a marca de "entrando" depois da animação (para não repetir nos próximos desenhos)
+function sbLimparEntrando(slot){ setTimeout(()=>{ if(slot) slot.entrando = false; }, 900); }
 // limites de posições: até 3 em ataque, até 2 em defesa
 const SB_MAX_ATK = 3, SB_MAX_DEF = 2;
 function sbContar(campo, modo){ return campo.filter(s=>s.modo===modo).length; }
 
 /* ---------- Início da partida ---------- */
-function abrirCampanhaSuper(){
+// tela de campeonatos (grupos de 5) -> níveis do campeonato escolhido
+function abrirCampanhaSuper(grupoIdx){
   mostrarTela("tela-campanha");
   $("#camp-pontos").textContent = progresso.pontos;
   $("#camp-titulo").textContent = "🃏 Super Battle Championship";
   $("#camp-desc").innerHTML = "Duelo com <b>ações</b>, elementos e cartas em ataque/defesa. Seu baralho é <b>toda a sua coleção</b>. Compre <b>LP</b> na loja (Super Batalha).";
   const cont = $("#campanha-lista");
+  if(grupoIdx === undefined || grupoIdx === null) sbRenderCaixas(cont);
+  else sbRenderNiveis(cont, grupoIdx);
+}
+function sbRenderCaixas(cont){
+  cont.className = "camp-grid";
   cont.innerHTML = "";
-  NIVEIS_SUPER.forEach(info=>{
+  campeonatosDoModo("super").forEach(g=>{
+    const liberado = (progresso.nivelSuper||1) >= g.de;
+    const fechado  = campeonatoFechado("super", g.idx) || (progresso.nivelSuper||1) > g.ate;
+    const el = document.createElement("button");
+    el.className = "camp-caixa" + (fechado ? " fechado" : liberado ? " atual" : " bloqueado");
+    el.disabled = !liberado;
+    el.style.setProperty("--dk1", g.cor[0]); el.style.setProperty("--dk2", g.cor[1]);
+    const venc = Math.max(0, Math.min(g.ate, (progresso.nivelSuper||1)-1) - g.de + 1);
+    const total = g.ate - g.de + 1;
+    el.innerHTML =
+      `<span class="camp-cartinha"></span>`+
+      `<span class="camp-nome">${g.nome}</span>`+
+      `<span class="camp-dif">${g.dif}</span>`+
+      `<span class="camp-prog">${fechado ? "🏆 fechado" : liberado ? `${venc}/${total} vencidos` : "🔒 bloqueado"}</span>`+
+      `<span class="camp-bonus">💰 ${g.bonus} ao fechar</span>`;
+    if(liberado) el.onclick = ()=>abrirCampanhaSuper(g.idx);
+    cont.appendChild(el);
+  });
+}
+function sbRenderNiveis(cont, grupoIdx){
+  const g = campeonatosDoModo("super")[grupoIdx];
+  cont.className = "";
+  cont.innerHTML = "";
+  const topo = document.createElement("div");
+  topo.className = "camp-topo";
+  topo.style.setProperty("--dk1", g.cor[0]); topo.style.setProperty("--dk2", g.cor[1]);
+  topo.innerHTML = `<button class="btn btn-sec btn-camp-voltar">← Campeonatos</button>`+
+    `<span class="camp-topo-info"><b>${g.nome}</b><small>${g.dif} · níveis ${g.de}–${g.ate} · 💰 ${g.bonus} ao fechar</small></span>`;
+  topo.querySelector(".btn-camp-voltar").onclick = ()=>abrirCampanhaSuper();
+  cont.appendChild(topo);
+  NIVEIS_SUPER.filter(i=>i.n>=g.de && i.n<=g.ate).forEach(info=>{
     const est = info.n < progresso.nivelSuper ? "vencido"
               : info.n === progresso.nivelSuper ? "atual" : "bloqueado";
     const el = document.createElement("button");
     el.className = "nivel-item " + est;
     el.disabled = est === "bloqueado";
     const tag = est==="vencido" ? "✔ vencido" : est==="atual" ? "▶ Duelar" : "🔒 bloqueado";
-    const c = info.cor || ["#5a3ea5","#432c86"];
-    el.style.setProperty("--dk1", c[0]); el.style.setProperty("--dk2", c[1]);
+    el.style.setProperty("--dk1", g.cor[0]); el.style.setProperty("--dk2", g.cor[1]);
     el.innerHTML =
       `<span class="nivel-num nivel-tema">${info.n}</span>`+
       `<span class="nivel-info"><b>${info.nome}</b>`+
@@ -143,7 +180,7 @@ function iniciarSuperNivel(nivel){
   sb.nivel = nivel;
   sb.fim = false; sb.travado = false; sb.selecao = null; sb.abortado = false;
   sb.rodadaDe = {jogador:0, cpu:0};                   // nº de turnos de cada lado (ataque só a partir do 2º)
-  sb.corOp = info.cor || ["#5a3ea5","#432c86"];      // cor temática do oponente
+  sb.corOp = corCampeonato("super", nivel);           // cor das cartas do campeonato
   sbSortearCorBaralho();                             // cor da pilha de compra do jogador
   sb.lpJog = progresso.lpSuper || 100;
   sb.lpCpu = info.lp;
@@ -299,11 +336,14 @@ function sbColocar(idx, modo, cima){
   if(modo === "ataque" && sbContar(sb.campoJog, "ataque") >= SB_MAX_ATK){ Som.play("erro"); sbFecharModalColocar(); sbMsg(`Máximo de ${SB_MAX_ATK} cartas em ataque.`); return; }
   if(modo === "defesa" && sbContar(sb.campoJog, "defesa") >= SB_MAX_DEF){ Som.play("erro"); sbFecharModalColocar(); sbMsg(`Máximo de ${SB_MAX_DEF} cartas em defesa.`); return; }
   sb.maoJog.splice(idx, 1);
-  sb.campoJog.push(sbNovoSlot(carta, modo, cima));
+  const novo = sbNovoSlot(carta, modo, cima);
+  novo.entrando = true;                 // dispara a animação de "girar e ir para a posição"
+  sb.campoJog.push(novo);
   sb.selecao = null;
   sbFecharModalColocar();
   Som.play("comprar");
   sbLog(`Você colocou ${carta.nome} em ${modo === "ataque" ? "ATAQUE" : "DEFESA"} (${cima ? "virada p/ cima" : "virada p/ baixo"}).`);
+  sbLimparEntrando(novo);
   sbGastarAcao();
 }
 // clique numa carta do campo do jogador -> abre menu (atacar / descartar / sacrificar)
@@ -629,12 +669,15 @@ function sbPassoCPU(){
     if(melhorModo === "defesa" && !podeDef) melhorModo = "ataque";
     const cima = Math.random() < 0.25;           // maioria virada p/ baixo
     const carta = mao.splice(melhor,1)[0];
-    campo.push(sbNovoSlot(carta, melhorModo, cima));
+    const novoCpu = sbNovoSlot(carta, melhorModo, cima);
+    novoCpu.entrando = true;               // mesma animação de entrada do jogador
+    campo.push(novoCpu);
     sbLog(`Oponente colocou uma carta${cima ? " (revelada)" : " virada para baixo"}.`);
     sb.acoes--;
     Som.play("select");
     sbDesenhar();
-    return void setTimeout(sbPassoCPU, 900);
+    sbLimparEntrando(novoCpu);
+    return void setTimeout(sbPassoCPU, 1100);
   }
   // 3) comprar
   if(sb.baralhoCpu.length && mao.length < 6){
@@ -665,12 +708,14 @@ function sbFim(venceu){
     progresso.vitorias = (progresso.vitorias||0) + 1;
     if(primeiraVez && progresso.nivelSuper < MAX_NIVEL_SUPER) progresso.nivelSuper++;
     salvarProgresso();
+    const campFec = primeiraVez ? premiarCampeonato("super", sb.nivel) : null;
     var marco = premiarMarcoVitoria();
     const zerou = primeiraVez && sb.nivel === MAX_NIVEL_SUPER;
     t.textContent = zerou ? "👑 REI DOS DUELOS!" : "🏆 VITÓRIA!";
     t.classList.add("venceu");
     s.innerHTML = `Você derrotou <b>${info.nome}</b> com ${sb.lpJog} LP restante!<br>`+
-      `<span class="ganho">+${ganho} de ouro</span>${primeiraVez?' <span class="bonus">(bônus 1ª vez)</span>':''}`;
+      `<span class="ganho">+${ganho} de ouro</span>${primeiraVez?' <span class="bonus">(bônus 1ª vez)</span>':''}`+
+      (campFec ? `<br><span class="camp-fechado-msg">🏆 Campeonato <b>${campFec.nome}</b> fechado — <span class="ganho">+${campFec.bonus} moedas!</span></span>` : "");
   } else {
     Som.play("perderPartida");
     progresso.derrotas = (progresso.derrotas||0) + 1;
@@ -746,6 +791,7 @@ function sbSlotEl(slot, meu, atacando, tipoSlot){
     (!meu && atacando && slot ? " alvo" : "") +
     (podeAtacar && !sacrificando ? " pode-atacar" : "") +
     (meu && slot && sacrificando ? " pode-fortalecer" : "") +
+    (slot && slot.entrando ? " entrando" : "") +
     (atacando && sb.selecao.atacante === slot ? " selecionado" : "");
   div.innerHTML = slot ? sbHtmlCarta(slot, meu) : "";
   if(slot){
@@ -867,7 +913,9 @@ function comprarLPSuper(){
 document.addEventListener("DOMContentLoaded", ()=>{
   const bt = $("#btn-campanha-super"); if(bt) bt.addEventListener("click", abrirCampanhaSuper);
   const be = $("#btn-sb-encerrar"); if(be) be.addEventListener("click", ()=>{ if(!sb.travado && sb.turnoDe==="jogador") sbEncerrarTurno(); });
-  const bs = $("#btn-sb-sair"); if(bs) bs.addEventListener("click", ()=>{ sbAbortarDuelo(); abrirCampanhaSuper(); });
+  const bs = $("#btn-sb-sair"); if(bs) bs.addEventListener("click", ()=>{
+    pedirConfirmacaoSaida(()=>{ sbAbortarDuelo(); abrirCampanhaSuper(); });
+  });
   const bd = $("#sb-btn-direto"); if(bd) bd.addEventListener("click", sbAtaqueDireto);
   const bl = $("#btn-comprar-lp"); if(bl) bl.addEventListener("click", comprarLPSuper);
   const bcancel = $("#sb-colocar-cancelar"); if(bcancel) bcancel.addEventListener("click", sbFecharModalColocar);

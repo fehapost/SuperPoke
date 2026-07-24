@@ -48,10 +48,27 @@ body{
 .logo-sub{font-size:.72rem;letter-spacing:2px;color:#cfe0ff;margin-top:8px}
 .menu-desc{max-width:520px;line-height:1.5;color:#dfe8ff}
 .menu-botoes{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
-/* menu vertical: todos os retângulos do mesmo tamanho */
-.menu-vertical{display:flex;flex-direction:column;gap:10px;width:100%;max-width:340px}
-.menu-btn{width:100%;min-height:54px;display:flex;align-items:center;justify-content:center;gap:8px;
-  font-size:1.05rem;font-weight:800;letter-spacing:.5px;padding:12px 18px;background:var(--vermelho)}
+/* menu em quadrados: 4 por linha, 2 linhas */
+.menu-grade{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:100%;max-width:620px}
+.menu-quad{aspect-ratio:1/1;border:none;border-radius:18px;cursor:pointer;font:inherit;color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:10px;
+  box-shadow:var(--sombra);transition:transform .12s,filter .12s;
+  background:linear-gradient(155deg,var(--q1),var(--q2))}
+.menu-quad:hover{transform:translateY(-4px) scale(1.03);filter:brightness(1.1)}
+.menu-quad:active{transform:translateY(-1px) scale(.99)}
+.mq-ico{font-size:2.1rem;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+.mq-txt{font-size:.82rem;font-weight:800;letter-spacing:.4px;text-align:center;line-height:1.15;
+  text-shadow:0 1px 3px rgba(0,0,0,.5)}
+/* uma cor por atalho (sem laranja) */
+.q-classic{--q1:#e3350d;--q2:#8a1a05}
+.q-champ  {--q1:#8e5ce0;--q2:#4a2790}
+.q-tour   {--q1:#ec4899;--q2:#8f1e56}
+.q-livre  {--q1:#f5c518;--q2:#9c7605}
+.q-loja   {--q1:#3bb54a;--q2:#1c6b26}
+.q-colecao{--q1:#2a75bb;--q2:#12406e}
+.q-como   {--q1:#17b3b8;--q2:#0a6165}
+.q-reset  {--q1:#5c6b82;--q2:#333d4d}
+.q-livre .mq-txt,.q-livre .mq-ico{color:#3b2c00;text-shadow:none}
 
 /* ===== INTRO ===== */
 #tela-intro{justify-content:center;min-height:80vh;cursor:pointer;text-align:center}
@@ -202,6 +219,16 @@ body{
   box-shadow:0 0 10px rgba(227,53,13,.55);animation:pulse 1s infinite}
 .sb-slot.pode-fortalecer{border-style:solid;border-color:#8ff0a8;cursor:pointer;
   box-shadow:0 0 12px rgba(59,181,74,.6);animation:pulse 1s infinite}
+/* carta chega girando e "aterrissa" na posição */
+.sb-slot.entrando{perspective:700px}
+.sb-slot.entrando .sbcard{animation:sbAterrissa .8s cubic-bezier(.25,1.3,.45,1) both;
+  transform-origin:center;z-index:5}
+@keyframes sbAterrissa{
+  0%  {transform:translateY(-120px) scale(2.1) rotateY(540deg);opacity:0}
+  35% {opacity:1}
+  70% {transform:translateY(6px) scale(1.06) rotateY(0deg)}
+  100%{transform:none;opacity:1}
+}
 
 #sb-timer{font-weight:900;color:#ff9d8a;font-size:.9rem}
 /* barra de tempo do turno (bem fina — metade da barra de vida) */
@@ -479,7 +506,7 @@ body{
 #mao-op-lista{display:flex;flex-direction:column;gap:8px}
 
 /* mini-carta virada para baixo (verso Pokébola) */
-.mini-carta.mini-verso{height:74px;background:repeating-linear-gradient(45deg,#c0392b 0 8px,#a5281c 8px 16px);
+.mini-carta.mini-verso{height:74px;background:linear-gradient(150deg,var(--dk1,#c0392b),var(--dk2,#a5281c));
   border-color:rgba(255,255,255,.4);align-items:center;justify-content:center;padding:0}
 .mini-carta.mini-verso::after{content:"";width:30px;height:30px;border-radius:50%;
   background:linear-gradient(#fff 0 50%,#e3350d 50% 100%);border:3px solid #1b1f2a;
@@ -551,8 +578,7 @@ body{
 /* Verso da carta */
 .carta-verso{
   width:300px;max-width:100%;height:353px;border-radius:18px;
-  background:
-    repeating-linear-gradient(45deg,#c0392b 0 14px,#a5281c 14px 28px);
+  background:linear-gradient(150deg,var(--dk1,#c0392b),var(--dk2,#a5281c));
   border:3px solid rgba(255,255,255,.5);box-shadow:var(--sombra);
   display:flex;align-items:center;justify-content:center;
 }
@@ -782,6 +808,36 @@ body{
 /* ===== CAMPANHA (escada de oponentes) ===== */
 #tela-campanha,#tela-loja,#tela-colecao{width:100%}
 #campanha-lista{width:100%;display:flex;flex-direction:column;gap:10px;padding-top:8px}
+/* ---- caixas de campeonato (grupos de 5 níveis) ---- */
+#campanha-lista.camp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.camp-caixa{position:relative;border:none;border-radius:18px;cursor:pointer;font:inherit;color:#fff;
+  padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:linear-gradient(155deg,var(--dk1),var(--dk2));box-shadow:var(--sombra);
+  transition:transform .12s,filter .12s}
+.camp-caixa:hover:not(:disabled){transform:translateY(-4px);filter:brightness(1.1)}
+.camp-caixa:disabled{cursor:not-allowed;filter:grayscale(.85) brightness(.55)}
+.camp-caixa.fechado{outline:3px solid var(--amarelo)}
+/* cartinha empilhada no topo da caixa, na cor do campeonato */
+.camp-cartinha{position:relative;width:46px;height:62px;border-radius:8px;
+  background:linear-gradient(150deg,var(--dk1),var(--dk2));
+  border:3px solid rgba(255,255,255,.65);box-shadow:3px 3px 0 rgba(0,0,0,.28)}
+.camp-cartinha::after{content:"";position:absolute;top:50%;left:50%;width:24px;height:24px;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:linear-gradient(#e3350d 0 46%,#2b2b2b 46% 54%,#f5f5f5 54% 100%);border:2px solid #1b1f2a}
+.camp-nome{font-size:1rem;font-weight:900;text-align:center;line-height:1.15;
+  text-shadow:0 2px 4px rgba(0,0,0,.45)}
+.camp-dif{font-size:.72rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+  background:rgba(0,0,0,.32);border-radius:999px;padding:2px 10px}
+.camp-prog{font-size:.78rem;opacity:.95}
+.camp-bonus{font-size:.76rem;font-weight:800;color:var(--amarelo);
+  background:rgba(0,0,0,.3);border-radius:8px;padding:2px 8px}
+/* topo com o campeonato aberto */
+.camp-topo{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;
+  background:linear-gradient(120deg,var(--dk1),var(--dk2));box-shadow:var(--sombra)}
+.camp-topo-info{display:flex;flex-direction:column;line-height:1.25}
+.camp-topo-info b{font-size:1.05rem}
+.camp-topo-info small{opacity:.85;font-size:.76rem}
+.camp-fechado-msg{display:inline-block;margin-top:4px;font-weight:800;color:var(--amarelo)}
 .nivel-item{display:flex;align-items:center;gap:14px;text-align:left;
   padding:14px 18px;border-radius:14px;border:none;font:inherit;color:#fff;
   background:var(--azul-esc);box-shadow:var(--sombra);cursor:pointer;
@@ -1005,7 +1061,12 @@ body{
   .logo-super{font-size:1.5rem}
   .btn-grande{padding:12px 22px;font-size:1.05rem}
   .avatar-grande{width:60px;height:60px;font-size:2rem}
-  .menu-btn{min-height:48px;font-size:.95rem}
+  .menu-grade{gap:8px;max-width:100%}
+  .mq-ico{font-size:1.6rem}
+  .mq-txt{font-size:.66rem}
+  .menu-quad{border-radius:14px;gap:5px}
+  .camp-nome{font-size:.88rem}
+  .camp-cartinha{width:38px;height:52px}
   .intro-pokeball{width:84px;height:84px}
   .como-titulo{font-size:1.35rem}
   .como-ico{font-size:1.4rem}

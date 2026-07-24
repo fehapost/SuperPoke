@@ -113,18 +113,26 @@
       Vença batalhas, ganhe pontos e compre cartas melhores na <b>Loja</b>!
     </p>
 
-    <div class="menu-vertical">
-      <button class="btn menu-btn" id="btn-campanha">⚔️ CLASSIC</button>
-      <button class="btn menu-btn btn-super" id="btn-campanha-super">🃏 CHAMPIONSHIP</button>
-      <button class="btn menu-btn btn-vida" id="btn-campanha-vida">❤️ LIFE TOURNAMENT</button>
-      <button class="btn menu-btn btn-sec" id="btn-loja">🛒 LOJA</button>
-      <button class="btn menu-btn btn-sec" id="btn-colecao">🃏 COLEÇÃO</button>
-      <button class="btn menu-btn btn-sec" id="btn-livre">⚡ BATALHA LIVRE</button>
-      <button class="btn menu-btn btn-sec" id="btn-como-jogar">❔ COMO JOGAR</button>
+    <div class="menu-grade">
+      <button class="menu-quad q-classic" id="btn-campanha">
+        <span class="mq-ico">⚔️</span><span class="mq-txt">Classic</span></button>
+      <button class="menu-quad q-champ" id="btn-campanha-super">
+        <span class="mq-ico">🃏</span><span class="mq-txt">Championship</span></button>
+      <button class="menu-quad q-tour" id="btn-campanha-vida">
+        <span class="mq-ico">❤️</span><span class="mq-txt">Tournament</span></button>
+      <button class="menu-quad q-livre" id="btn-livre">
+        <span class="mq-ico">⚡</span><span class="mq-txt">Batalha livre</span></button>
+      <button class="menu-quad q-loja" id="btn-loja">
+        <span class="mq-ico">🛒</span><span class="mq-txt">Loja</span></button>
+      <button class="menu-quad q-colecao" id="btn-colecao">
+        <span class="mq-ico">📚</span><span class="mq-txt">Coleção</span></button>
+      <button class="menu-quad q-como" id="btn-como-jogar">
+        <span class="mq-ico">❔</span><span class="mq-txt">Como jogar</span></button>
+      <button class="menu-quad q-reset" id="btn-reset">
+        <span class="mq-ico">↺</span><span class="mq-txt">Reiniciar progresso</span></button>
     </div>
     <div class="menu-botoes">
       <button class="btn btn-reset js-som">🔊</button>
-      <button class="btn btn-reset" id="btn-reset">↺ Reiniciar progresso</button>
     </div>
   </section>
 
@@ -407,6 +415,17 @@
         </div>
         <button class="btn btn-sec" id="sb-colocar-cancelar">Cancelar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== CONFIRMAR SAÍDA DA BATALHA ===== -->
+  <div id="modal-sair" class="modal" hidden>
+    <div class="modal-box sb-fim-pop-box">
+      <div id="sair-emoji">🚪</div>
+      <h2>Sair da batalha?</h2>
+      <p>Tem certeza que deseja sair da batalha? O progresso deste duelo será perdido.</p>
+      <button class="btn btn-grande" id="btn-sair-sim">Sim, sair</button>
+      <button class="btn btn-sec" id="btn-sair-nao">Continuar jogando</button>
     </div>
   </div>
 
