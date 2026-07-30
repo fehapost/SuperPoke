@@ -541,8 +541,33 @@ body{
   .sb-lp-box .hp-bar{width:80px}
   .sb-maocarta{width:54px}
   .sb-maocarta img{width:40px;height:34px}
-  #sb-topo{padding:5px 8px}
-  .sb-lp{font-size:.95rem}
+  /* cabeçalho do campeonato compacto no celular (não empilhar/ocupar 30%) */
+  /* grid: 1ª linha [cpu | ▶ | meu], 2ª linha [centro largo] */
+  #sb-topo{display:grid;grid-template-columns:1fr auto 1fr;
+    grid-template-areas:"cpu btn meu" "centro centro centro";
+    gap:2px 6px;padding:4px 8px;align-items:center}
+  .sb-lado.cpu{grid-area:cpu;justify-self:start;min-width:0}
+  .btn-encerrar-redondo{grid-area:btn;justify-self:center;align-self:center}
+  .sb-lado.meu{grid-area:meu;justify-self:end;min-width:0}
+  .sb-centro{grid-area:centro}
+  #sb-topo .avatar{width:28px;height:28px;font-size:.95rem}
+  #sb-topo .sb-lado{gap:5px;align-items:center}
+  .sb-lp-box{gap:0;min-width:0}
+  .sb-lp-nome{font-size:.56rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:78px}
+  .sb-lp{font-size:.82rem}
+  .sb-lp-box .hp-bar{width:52px;height:5px}
+  .sb-mao-info{display:none}                 /* economiza espaço no topo do celular */
+  #sb-topo .btn-mini{font-size:.56rem;padding:3px 5px}   /* Sair / Dicas compactos */
+  /* 2ª linha: centro horizontal (não colapsa mais para 0) */
+  .sb-centro{flex-direction:row;flex-wrap:wrap;
+    justify-content:center;align-items:baseline;gap:0 8px;line-height:1.1}
+  #sb-camp-nome{font-size:.66rem}
+  #sb-titulo{display:none}                 /* redundante: o nome do oponente já aparece no placar */
+  #sb-turno{font-size:.72rem}
+  #sb-rodada-num{font-size:.66rem}
+  #sb-acoes{font-size:.66rem}
+  #sb-timer{display:none}                   /* a barra de tempo abaixo já mostra o tempo */
+  #sb-tempo-barra{height:3px}
   .sb-deck{width:88px}
   .sb-deck-pilha{width:74px;height:100px}
   .sb-pokeball{width:38px;height:38px}
