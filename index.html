@@ -188,11 +188,16 @@
 
   <!-- ===== TELA CAMPANHA (usada pelos 2 modos) ===== -->
   <section id="tela-campanha" class="tela">
-    <header class="sub-header">
-      <h2 id="camp-titulo">⚔️ Campanha</h2>
-      <span class="chip">💰 <b id="camp-pontos">0</b> pts</span>
-      <button class="btn btn-sec btn-ir-loja" id="btn-camp-loja">🛒 Loja</button>
-      <button class="btn btn-sec" id="btn-camp-voltar">Voltar</button>
+    <header class="sub-header sub-2l">
+      <div class="sh-l1">
+        <h2 id="camp-titulo">⚔️ Campanha</h2>
+        <span class="chip sh-ouro">💰 <b id="camp-pontos">0</b> pts</span>
+      </div>
+      <div class="sh-l2">
+        <button class="btn btn-sec btn-ir-loja" id="btn-camp-loja">🛒 Loja</button>
+        <button class="btn btn-sec btn-ir-time">🃏 Time</button>
+        <button class="btn btn-sec" id="btn-camp-voltar">Voltar</button>
+      </div>
     </header>
     <p class="sub-desc" id="camp-desc">Derrote os oponentes em ordem — cada um é mais forte que o anterior. Cada vitória rende ouro.</p>
     <div id="campanha-lista"></div>
@@ -200,10 +205,16 @@
 
   <!-- ===== TELA BATALHA LIVRE (2 opções) ===== -->
   <section id="tela-livre" class="tela">
-    <header class="sub-header">
-      <h2>⚡ Batalha livre</h2>
-      <button class="btn btn-sec btn-ir-loja">🛒 Loja</button>
-      <button class="btn btn-sec" id="btn-livre-voltar">Voltar</button>
+    <header class="sub-header sub-2l">
+      <div class="sh-l1">
+        <h2>⚡ Batalha livre</h2>
+        <span class="chip sh-ouro">💰 <b id="livre-pontos">0</b> pts</span>
+      </div>
+      <div class="sh-l2">
+        <button class="btn btn-sec btn-ir-loja">🛒 Loja</button>
+        <button class="btn btn-sec btn-ir-time">🃏 Time</button>
+        <button class="btn btn-sec" id="btn-livre-voltar">Voltar</button>
+      </div>
     </header>
     <p class="sub-desc">Como você quer batalhar?</p>
     <div id="livre-lista" class="camp-grid">
@@ -474,6 +485,19 @@
       <div class="modal-acoes-linha">
         <button class="btn btn-sec" id="btn-sair-nao">Continuar</button>
         <button class="btn btn-perigo" id="btn-sair-sim">Sim, sair</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONFIRMAR REINICIAR PROGRESSO ===== -->
+  <div id="modal-reset" class="modal" hidden>
+    <div class="modal-box sb-fim-pop-box">
+      <div style="font-size:2.6rem">⚠️</div>
+      <h2>Reiniciar progresso?</h2>
+      <p>Isso apaga <b>tudo</b>: ouro, cartas, níveis e campeonatos. Você vai escolher 3 novos Pokémon do zero. Não dá para desfazer.</p>
+      <div class="modal-acoes-linha">
+        <button class="btn btn-sec" id="btn-reset-nao">Cancelar</button>
+        <button class="btn btn-perigo" id="btn-reset-sim">Sim, reiniciar</button>
       </div>
     </div>
   </div>

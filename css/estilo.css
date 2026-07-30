@@ -77,11 +77,14 @@ body{
 /* ===== MENU ===== */
 #tela-menu{padding-top:2vh;text-align:center}
 .tela.ativa#tela-menu{gap:12px}
-.logo{display:flex;flex-direction:column;line-height:1;filter:drop-shadow(0 4px 0 rgba(0,0,0,.3))}
-.logo-super{font-size:2rem;font-weight:900;letter-spacing:6px;color:var(--amarelo);
-  -webkit-text-stroke:1.5px var(--azul-esc)}
+.logo{display:flex;flex-direction:column;line-height:1;align-items:center}
+/* paint-order:stroke faz o contorno ficar ATRÁS do preenchimento (não "come" as letras) */
+.logo-super{font-size:2rem;font-weight:900;letter-spacing:5px;color:var(--amarelo);
+  -webkit-text-stroke:2px var(--azul-esc);paint-order:stroke fill;
+  text-shadow:0 2px 0 rgba(0,0,0,.25)}
 .logo-pokemon{font-size:3.6rem;font-weight:900;letter-spacing:2px;color:var(--amarelo);
-  -webkit-text-stroke:3px var(--azul-esc);text-shadow:0 5px 0 var(--azul-esc)}
+  -webkit-text-stroke:3px var(--azul-esc);paint-order:stroke fill;
+  text-shadow:0 4px 0 var(--azul-esc),0 6px 10px rgba(0,0,0,.35)}
 .logo-sub{font-size:.72rem;letter-spacing:2px;color:#cfe0ff;margin-top:8px}
 .menu-desc{max-width:520px;line-height:1.5;color:#dfe8ff}
 .menu-botoes{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
@@ -794,6 +797,13 @@ body{
   background:linear-gradient(180deg,#1a2740 0%,#182238 100%);padding:12px 16px;border-radius:var(--radius);
   position:sticky;top:0;z-index:25;box-shadow:0 6px 14px rgba(0,0,0,.45)}
 .sub-header h2{flex:1;font-size:1.2rem;white-space:nowrap}
+/* header em 2 linhas: (título · ouro) / (Loja · Time · Voltar) */
+.sub-header.sub-2l{flex-direction:column;align-items:stretch;gap:8px}
+.sub-2l .sh-l1{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sub-2l .sh-l1 h2{flex:0 1 auto;font-size:1.15rem;white-space:normal;line-height:1.15}
+.sub-2l .sh-l1 .sh-ouro{flex:0 0 auto}
+.sub-2l .sh-l2{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sub-2l .sh-l2 .btn{flex:0 0 auto}
 .sub-header input{flex:1;min-width:140px;font:inherit;padding:8px 12px;border-radius:8px;border:none}
 .sub-desc{width:100%;color:#cfe0ff;font-size:.92rem;text-align:center;margin-top:-4px}
 

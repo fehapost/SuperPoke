@@ -480,7 +480,7 @@ function iniciarNivelVida(nivel, meuDeck){
 }
 
 /* ---------- Batalha livre (2 modos) ---------- */
-function escolherBatalhaLivre(){ mostrarTela("tela-livre"); }
+function escolherBatalhaLivre(){ const p=$("#livre-pontos"); if(p) p.textContent = progresso.pontos; mostrarTela("tela-livre"); }
 function batalhaLivre(modo){
   let meu, cpu;
   if(modo === "meu"){
@@ -1689,10 +1689,13 @@ function atualizarMenu(){
 }
 function irMenu(){ mostrarTela("tela-menu"); atualizarMenu(); }
 
-function resetProgresso(){
-  if(!confirm("Reiniciar todo o progresso? Você vai escolher 3 novos Pokémon e volta a 0 de ouro.")) return;
+function resetProgresso(){ const m = $("#modal-reset"); if(m){ m.hidden = false; } else confirmarReset(); }
+function fecharReset(){ const m = $("#modal-reset"); if(m) m.hidden = true; }
+function confirmarReset(){
+  fecharReset();
   progresso = progressoPadrao();
   salvarProgresso();
+  Som.play("erro");
   iniciarApp();   // owned vazio -> escolha inicial
 }
 
@@ -1790,6 +1793,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
   $("#btn-col-voltar").addEventListener("click", irMenu);
   // botão "Loja" no topo das telas (campanha / batalha livre)
   document.querySelectorAll(".btn-ir-loja").forEach(b=>b.addEventListener("click", abrirLoja));
+  // botão "Time" -> abre a Coleção (seu baralho/time)
+  document.querySelectorAll(".btn-ir-time").forEach(b=>b.addEventListener("click", abrirColecao));
   // info do pacote (chances)
   $("#pac-info-fechar").addEventListener("click", fecharInfoPacote);
   $("#modal-pacote-info").addEventListener("click", e=>{ if(e.target.id === "modal-pacote-info") fecharInfoPacote(); });
@@ -1807,6 +1812,9 @@ document.addEventListener("DOMContentLoaded", ()=>{
   $("#btn-config-voltar").addEventListener("click", irMenu);
   $("#btn-config-salvar").addEventListener("click", salvarConfig);
   $("#btn-config-reset").addEventListener("click", resetProgresso);
+  $("#btn-reset-nao").addEventListener("click", fecharReset);
+  $("#btn-reset-sim").addEventListener("click", confirmarReset);
+  $("#modal-reset").addEventListener("click", e=>{ if(e.target.id === "modal-reset") fecharReset(); });
 
   // filtro da loja
   document.querySelectorAll(".filtro-btn").forEach(b=>b.addEventListener("click", ()=>{
