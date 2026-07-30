@@ -269,8 +269,10 @@ body{
 .loja-super .loja-vida-info{color:#d3bff5}
 
 #tela-super{width:100%;gap:6px}
-#sb-topo{width:100%;display:flex;justify-content:space-between;align-items:flex-start;
-  background:rgba(0,0,0,.28);border-radius:var(--radius);padding:8px 14px;gap:10px}
+#sb-topo{width:100%;display:flex;justify-content:flex-start;align-items:center;flex-wrap:nowrap;
+  background:rgba(0,0,0,.28);border-radius:var(--radius);padding:8px 14px;gap:8px 10px}
+.sb-centro{flex:1 1 auto}
+#btn-sb-sair.sb-btn-sair{align-self:center}
 .sb-lado{display:flex;gap:8px;align-items:flex-start}
 .sb-lado.meu{justify-content:flex-end}
 .sb-lp-box{display:flex;flex-direction:column;gap:2px}
@@ -544,15 +546,17 @@ body{
   .sb-lp-box .hp-bar{width:80px}
   .sb-maocarta{width:54px}
   .sb-maocarta img{width:40px;height:34px}
-  /* cabeçalho do campeonato compacto no celular (não empilhar/ocupar 30%) */
-  /* grid: 1ª linha [cpu | ▶ | meu], 2ª linha [centro largo] */
-  #sb-topo{display:grid;grid-template-columns:1fr auto 1fr;
-    grid-template-areas:"cpu btn meu" "centro centro centro";
-    gap:2px 6px;padding:4px 8px;align-items:center}
+  /* cabeçalho do campeonato compacto no celular (não empilhar/sobrepor) */
+  /* grid: linha1 [oponente | ▶ | jogador], linha2 [Sair | centro | Dicas] */
+  #sb-topo{display:grid;grid-template-columns:auto 1fr auto;
+    grid-template-areas:"cpu btn meu" "sair centro dicas";
+    gap:4px 6px;padding:5px 8px;align-items:center;flex-wrap:nowrap}
   .sb-lado.cpu{grid-area:cpu;justify-self:start;min-width:0}
   .btn-encerrar-redondo{grid-area:btn;justify-self:center;align-self:center}
   .sb-lado.meu{grid-area:meu;justify-self:end;min-width:0}
-  .sb-centro{grid-area:centro}
+  .sb-btn-sair{grid-area:sair;justify-self:start}
+  .sb-btn-dicas{grid-area:dicas;justify-self:end}
+  .sb-centro{grid-area:centro;justify-self:center;flex:none}
   #sb-topo .avatar{width:26px;height:26px;font-size:.9rem}
   #sb-topo .sb-lado{gap:6px;align-items:center;flex-wrap:nowrap}
   .sb-lp-box{gap:0;min-width:0}
