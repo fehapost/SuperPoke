@@ -1491,18 +1491,20 @@ function renderColecao(filtro){
   lista.forEach(p=>{
     const naEquipe = fav.includes(p.id);
     const qtd = qtdDe(p.id);
-    const el = document.createElement("div");
-    el.className = "col-item" + (naEquipe ? " favorito" : "");
-    el.dataset.id = p.id;
-    el.innerHTML = htmlCarta(p, {}) +
-      `<div class="fav-badge">${naEquipe ? "⭐ no time" : "☆ favoritar"}</div>`+
-      `<button class="btn-ver" title="Ver melhor">🔍</button>`+
-      (qtd > 1 ? `<div class="qtd-badge">x${qtd}</div>` : "")+
-      `<button class="btn-vender" title="Vender por ${precoVenda(p)} pts">💰 ${precoVenda(p)}</button>`;
-    el.querySelector(".btn-ver").onclick = (e)=>{ e.stopPropagation(); verCarta(p.id); };
-    el.querySelector(".btn-vender").onclick = (e)=>{ e.stopPropagation(); venderCarta(p.id); };
-    el.onclick = ()=>toggleFavorito(p.id, el);
-    grid.appendChild(el);
+    // mostra uma carta para CADA cópia possuída (em vez de um "x2")
+    for(let c = 0; c < qtd; c++){
+      const el = document.createElement("div");
+      el.className = "col-item" + (naEquipe ? " favorito" : "");
+      el.dataset.id = p.id;
+      el.innerHTML = htmlCarta(p, {}) +
+        `<div class="fav-badge">${naEquipe ? "⭐ no time" : "☆ favoritar"}</div>`+
+        `<button class="btn-ver" title="Ver melhor">🔍</button>`+
+        `<button class="btn-vender" title="Vender por ${precoVenda(p)} pts">💰 ${precoVenda(p)}</button>`;
+      el.querySelector(".btn-ver").onclick = (e)=>{ e.stopPropagation(); verCarta(p.id); };
+      el.querySelector(".btn-vender").onclick = (e)=>{ e.stopPropagation(); venderCarta(p.id); };
+      el.onclick = ()=>toggleFavorito(p.id, el);
+      grid.appendChild(el);
+    }
   });
 }
 // Vende UMA cópia da carta por metade do preço da raridade

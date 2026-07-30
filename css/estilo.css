@@ -948,6 +948,10 @@ body{
 #campanha-lista{width:100%;display:flex;flex-direction:column;gap:10px;padding-top:8px}
 /* ---- caixas de campeonato (grupos de 5 níveis) ---- */
 #campanha-lista.camp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+/* batalha livre: dois tipos espaçados e centralizados na tela */
+#livre-lista.camp-grid{width:100%;display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;
+  gap:36px;max-width:720px;margin:30px auto 0}
+#livre-lista .camp-cell{flex:0 1 280px;max-width:320px}
 .camp-caixa{position:relative;border:none;border-radius:18px;cursor:pointer;font:inherit;color:#fff;
   padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;
   background:linear-gradient(155deg,var(--dk1),var(--dk2));box-shadow:var(--sombra);
@@ -1178,26 +1182,26 @@ body{
   #rodada-info{font-size:.78rem}
   .mesa-info{font-size:.62rem}
 
-  /* cartas pequenas, atributos em 2 colunas só com ÍCONE + número */
+  /* cartas MAIORES na batalha (aproveita o espaço vertical) — atributos em 2 colunas com ícone + número */
   .slot-carta{min-width:0;max-width:none}
-  .carta,.carta-verso{width:100%;max-width:150px}
-  .carta-verso{height:190px}
-  .carta-topo{padding:5px 8px 2px}
-  .carta-num{font-size:.6rem}
-  .tag-tipo{font-size:.46rem;padding:1px 4px}
-  .carta-img{height:56px;margin:1px 8px 0}
-  .carta-img img{max-height:52px}
-  .carta-nome{font-size:.82rem;padding:2px 4px 0}
-  .carta-rar{font-size:.5rem;letter-spacing:1px;margin-bottom:2px}
+  .carta,.carta-verso{width:100%;max-width:168px}
+  .carta-verso{height:272px}
+  .carta-topo{padding:6px 9px 3px}
+  .carta-num{font-size:.72rem}
+  .tag-tipo{font-size:.54rem;padding:2px 6px}
+  .carta-img{height:104px;margin:3px 10px 0}
+  .carta-img img{max-height:98px}
+  .carta-nome{font-size:1.06rem;padding:3px 5px 1px}
+  .carta-rar{font-size:.62rem;letter-spacing:1px;margin-bottom:3px}
   .carta-attrs{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,auto);
-    grid-auto-flow:column;gap:3px;padding:2px 6px 8px}
-  .attr{padding:3px 4px;border-width:1.5px;justify-content:center;gap:3px}
+    grid-auto-flow:column;gap:5px;padding:4px 8px 10px}
+  .attr{padding:6px 6px;border-width:1.5px;justify-content:center;gap:4px}
   .attr .attr-nome>span{display:none}   /* esconde o texto, mostra só o ícone */
   .attr .attr-nome{gap:0}
-  .attr .attr-val{font-size:.9rem;padding-left:2px}
-  .ic{width:15px;height:15px}
-  #mesa{gap:4px;max-width:100%}
-  #vs-texto{font-size:1rem}
+  .attr .attr-val{font-size:1.18rem;padding-left:3px}
+  .ic{width:20px;height:20px}
+  #mesa{gap:6px;max-width:100%}
+  #vs-texto{font-size:1.2rem}
 
   /* mãos: faixas horizontais finas (jogador em cima, oponente embaixo) */
   #arena{flex-direction:column;align-items:stretch;gap:5px}
