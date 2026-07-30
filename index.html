@@ -284,30 +284,35 @@
   <section id="tela-jogo" class="tela">
     <div id="efeito-camada"></div>
     <header id="placar">
-      <div class="placar-canto esq">
+      <div class="placar-linha1">
+        <div class="placar-canto esq">
+          <div class="avatar avatar-jogador" id="avatar-jogador">🧑</div>
+          <div class="placar-lado meu">
+            <span class="placar-nome" id="nome-jogador">VOCÊ</span>
+            <span class="placar-cartas" id="cartas-jogador">0</span>
+            <div class="hp-bar" id="hp-jogador"><div class="hp-fill"></div></div>
+          </div>
+        </div>
+        <div class="placar-centro">
+          <span id="oponente-info" class="oponente-info"></span>
+          <span id="rodada-info">Rodada 1</span>
+          <span id="mesa-info" class="mesa-info"></span>
+        </div>
+        <div class="placar-canto dir">
+          <div class="placar-lado cpu">
+            <span class="placar-nome">OPONENTE</span>
+            <span class="placar-cartas" id="cartas-cpu">0</span>
+            <div class="hp-bar" id="hp-cpu"><div class="hp-fill"></div></div>
+          </div>
+          <div class="avatar avatar-oponente" id="avatar-oponente">🤖</div>
+        </div>
+      </div>
+      <div class="placar-linha2">
         <div class="botoes-mini">
           <button class="btn btn-mini" id="btn-regras">📖 Regras</button>
           <button class="btn btn-mini js-som">🔊</button>
         </div>
-        <div class="avatar avatar-jogador" id="avatar-jogador">🧑</div>
-        <div class="placar-lado meu">
-          <span class="placar-nome" id="nome-jogador">VOCÊ</span>
-          <span class="placar-cartas" id="cartas-jogador">0</span>
-          <div class="hp-bar" id="hp-jogador"><div class="hp-fill"></div></div>
-        </div>
-      </div>
-      <div class="placar-centro">
-        <span id="oponente-info" class="oponente-info"></span>
-        <span id="rodada-info">Rodada 1</span>
-        <span id="mesa-info" class="mesa-info"></span>
-      </div>
-      <div class="placar-canto dir">
-        <div class="placar-lado cpu">
-          <span class="placar-nome">OPONENTE</span>
-          <span class="placar-cartas" id="cartas-cpu">0</span>
-          <div class="hp-bar" id="hp-cpu"><div class="hp-fill"></div></div>
-        </div>
-        <div class="avatar avatar-oponente" id="avatar-oponente">🤖</div>
+        <span class="pl2-espaco"></span>
         <button class="btn btn-mini sair" id="btn-sair">✕ Sair</button>
         <button class="btn btn-mini btn-dicas" data-modo="classic">💡 Dicas</button>
       </div>
