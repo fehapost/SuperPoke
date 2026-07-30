@@ -550,14 +550,15 @@ body{
   .btn-encerrar-redondo{grid-area:btn;justify-self:center;align-self:center}
   .sb-lado.meu{grid-area:meu;justify-self:end;min-width:0}
   .sb-centro{grid-area:centro}
-  #sb-topo .avatar{width:28px;height:28px;font-size:.95rem}
-  #sb-topo .sb-lado{gap:5px;align-items:center}
+  #sb-topo .avatar{width:26px;height:26px;font-size:.9rem}
+  #sb-topo .sb-lado{gap:6px;align-items:center;flex-wrap:nowrap}
   .sb-lp-box{gap:0;min-width:0}
-  .sb-lp-nome{font-size:.56rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:78px}
-  .sb-lp{font-size:.82rem}
-  .sb-lp-box .hp-bar{width:52px;height:5px}
+  .sb-lp-nome{font-size:.56rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px}
+  .sb-lp{font-size:.82rem;white-space:nowrap}   /* não quebrar "100 LP" em 2 linhas */
+  .sb-lp-box .hp-bar{width:48px;height:5px}
   .sb-mao-info{display:none}                 /* economiza espaço no topo do celular */
-  #sb-topo .btn-mini{font-size:.56rem;padding:3px 5px}   /* Sair / Dicas compactos */
+  /* Sair / Dicas: mesmo tamanho, alinhados e um pouco maiores */
+  #sb-topo .btn-mini{font-size:.64rem;padding:5px 9px;border-radius:999px;white-space:nowrap;line-height:1}
   /* 2ª linha: centro horizontal (não colapsa mais para 0) */
   .sb-centro{flex-direction:row;flex-wrap:wrap;
     justify-content:center;align-items:baseline;gap:0 8px;line-height:1.1}
@@ -1015,6 +1016,10 @@ body{
 #tela-selecao{width:100%}
 #sel-grid{width:100%;display:grid;
   grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding-top:14px}
+/* no celular: 2 colunas de cartas (monte seu baralho / time / escolha inicial) */
+@media(max-width:560px){
+  #sel-grid,#ini-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+}
 .sel-item{position:relative;cursor:pointer;transition:transform .1s}
 .sel-item .carta{width:100%}
 .sel-item .carta-img{height:120px}
